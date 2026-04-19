@@ -1,17 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { BarChart2, Settings } from 'lucide-react';
 import NoteButtons from '@/components/NoteButtons';
 import ConfigPanel from '@/components/ConfigPanel';
+import StaffDisplay from '@/components/StaffDisplay';
 import { useNoteStats } from '@/lib/storage';
-import { ALL_NOTES, noteId, displayNoteName } from '@/lib/notes';
+import { ALL_NOTES, noteId } from '@/lib/notes';
 import { pickNote, updateWeight, initStats } from '@/lib/adaptive';
 import { Note } from '@/lib/types';
-
-const StaffDisplay = dynamic(() => import('@/components/StaffDisplay'), { ssr: false });
 
 type Phase = 'idle' | 'playing' | 'finished';
 type FlashType = 'correct' | 'wrong' | null;
@@ -130,7 +128,7 @@ export default function HomePage() {
               </p>
             </div>
             <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm border border-zinc-200 dark:border-zinc-800">
-              <StaffDisplay vexKey="c/4" clef="treble" />
+              <StaffDisplay vexKey="b/4" clef="treble" />
             </div>
             <button
               onClick={startSession}

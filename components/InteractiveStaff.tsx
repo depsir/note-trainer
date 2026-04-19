@@ -1,32 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { usePrefersDark } from '@/lib/client';
+import { STAFF_LINE_SPACING, STAFF_STEPS } from '@/lib/staff';
 import { Note, Clef, NoteStats } from '@/lib/types';
 import { noteId, displayNoteName } from '@/lib/notes';
 import { masteryScore } from '@/lib/adaptive';
 
-/**
- * Step distance from the bottom staff line (step 0 = line 1).
- * Lines are at even steps (0,2,4,6,8), spaces at odd steps.
- * Steps below staff: -1 (space), -2 (ledger line).
- * Steps above staff: 9 (space), 10 (ledger line).
- */
-const STEPS: Record<Clef, Record<string, number>> = {
-  treble: {
-    'c/4': -2, 'd/4': -1,
-    'e/4': 0, 'f/4': 1, 'g/4': 2, 'a/4': 3, 'b/4': 4,
-    'c/5': 5, 'd/5': 6, 'e/5': 7, 'f/5': 8,
-    'g/5': 9, 'a/5': 10,
-  },
-  bass: {
-    'e/2': -2, 'f/2': -1,
-    'g/2': 0, 'a/2': 1, 'b/2': 2, 'c/3': 3, 'd/3': 4,
-    'e/3': 5, 'f/3': 6, 'g/3': 7, 'a/3': 8,
-    'b/3': 9, 'c/4': 10,
-  },
-};
-
-const LINE_SPACING = 13;   // px between staff lines in viewBox units
+const LINE_SPACING = STAFF_LINE_SPACING; // px between staff lines in viewBox units
 const NOTE_RX = 9;          // note oval horizontal radius
 const NOTE_RY = 6;          // note oval vertical radius
 const LEDGER_HALF_W = 13;   // half-width of ledger lines
@@ -53,6 +33,7 @@ export interface InteractiveStaffProps {
   /** Stats mode: per-note statistics */
   noteStats?: Record<string, NoteStats>;
   nameSystem?: 'italian' | 'english';
+  showClef?: boolean;
 }
 
 export default function InteractiveStaff({
@@ -62,16 +43,9 @@ export default function InteractiveStaff({
   onToggleNote,
   noteStats,
   nameSystem = 'italian',
+  showClef = true,
 }: InteractiveStaffProps) {
-  const [dark, setDark] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    setDark(mq.matches);
-    const h = (e: MediaQueryListEvent) => setDark(e.matches);
-    mq.addEventListener('change', h);
-    return () => mq.removeEventListener('change', h);
-  }, []);
+  const dark = usePrefersDark();
 
   const showStats = !!noteStats;
   const isSelectMode = !!enabledNotes;
@@ -90,8 +64,10 @@ export default function InteractiveStaff({
   const deselectedFill = dark ? '#52525b' : '#d4d4d8';
 
   // Horizontal layout
-  const slotW = (SVG_W - CLEF_W - 6) / notes.length;
-  const nx = (i: number) => CLEF_W + (i + 0.5) * slotW;
+  const staffStartX = showClef ? CLEF_W - 4 : 8;
+  const noteStartX = showClef ? CLEF_W : 12;
+  const slotW = (SVG_W - noteStartX - 6) / notes.length;
+  const nx = (i: number) => noteStartX + (i + 0.5) * slotW;
   const ny = (step: number) => line1Y - step * (LINE_SPACING / 2);
 
   return (
@@ -102,31 +78,32 @@ export default function InteractiveStaff({
       style={{ display: 'block' }}
       aria-label={`${clef === 'treble' ? 'Violino' : 'Basso'} staff`}
     >
-      {/* Clef symbol */}
-      <text
-        x={4}
-        y={clef === 'treble' ? line1Y + 16 : line5Y + 10}
-        fontSize={clef === 'treble' ? 74 : 40}
-        fontFamily="serif"
-        fill={ink}
-      >
-        {clef === 'treble' ? '𝄞' : '𝄢'}
-      </text>
+      {showClef && (
+        <text
+          x={4}
+          y={clef === 'treble' ? line1Y + 16 : line5Y + 10}
+          fontSize={clef === 'treble' ? 74 : 40}
+          fontFamily="serif"
+          fill={ink}
+        >
+          {clef === 'treble' ? '𝄞' : '𝄢'}
+        </text>
+      )}
 
       {/* Staff lines at steps 0, 2, 4, 6, 8 */}
       {[0, 1, 2, 3, 4].map((i) => (
-        <line
-          key={i}
-          x1={CLEF_W - 4} y1={ny(i * 2)}
-          x2={SVG_W - 4}  y2={ny(i * 2)}
-          stroke={ink} strokeWidth={1}
-        />
+          <line
+            key={i}
+            x1={staffStartX} y1={ny(i * 2)}
+            x2={SVG_W - 4}  y2={ny(i * 2)}
+            stroke={ink} strokeWidth={1}
+          />
       ))}
 
       {/* Dashed histogram baseline */}
       {showStats && (
         <line
-          x1={CLEF_W - 4} y1={statsBaseline}
+          x1={staffStartX} y1={statsBaseline}
           x2={SVG_W - 4}  y2={statsBaseline}
           stroke={gridColor} strokeWidth={0.75} strokeDasharray="4 3"
         />
@@ -135,7 +112,7 @@ export default function InteractiveStaff({
       {/* Notes */}
       {notes.map((note, i) => {
         const id = noteId(note);
-        const step = STEPS[clef][note.vexKey] ?? 0;
+        const step = STAFF_STEPS[clef][note.vexKey] ?? 0;
         const cx = nx(i);
         const cy = ny(step);
 

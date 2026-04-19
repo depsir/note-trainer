@@ -1,6 +1,6 @@
 'use client';
 
-import { NOTE_LETTERS, displayNoteName } from '@/lib/notes';
+import { displayNoteName } from '@/lib/notes';
 import { NoteNameSystem } from '@/lib/types';
 
 interface NoteButtonsProps {

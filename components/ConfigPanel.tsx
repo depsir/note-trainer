@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ExerciseConfig } from '@/lib/types';
-import { ALL_NOTES, displayNoteName, noteId } from '@/lib/notes';
+import { ALL_NOTES, noteId } from '@/lib/notes';
 import { X } from 'lucide-react';
 import InteractiveStaff from '@/components/InteractiveStaff';
 
@@ -187,6 +187,7 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
                     enabledNotes={new Set(draft.enabledNotes)}
                     onToggleNote={toggleNote}
                     nameSystem={draft.nameSystem}
+                    showClef={false}
                   />
                 </div>
                 <p className="text-xs text-zinc-400 mt-1">Tocca una nota per attivarla / disattivarla</p>

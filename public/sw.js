@@ -1,7 +1,7 @@
 // Service Worker for Note Coach PWA
 // Cache-first strategy for app shell assets, network-first for navigation
 
-const CACHE_NAME = 'note-coach-v1';
+const CACHE_NAME = 'note-coach-v2';
 
 const APP_SHELL = [
   '/',
@@ -30,6 +30,8 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  if (request.method !== 'GET') return;
+
   // Only handle same-origin requests
   if (url.origin !== location.origin) return;
 
@@ -41,8 +43,10 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+          }
           return res;
         })
         .catch(() => caches.match(request).then((r) => r || caches.match('/')))

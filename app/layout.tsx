@@ -35,11 +35,12 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <html
-      lang="it"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    return (
+      <html
+        lang="it"
+        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+        suppressHydrationWarning
+      >
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <meta name="mobile-web-app-capable" content="yes" />
