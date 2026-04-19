@@ -10,11 +10,13 @@ interface StaffDisplayProps {
   flash?: 'correct' | 'wrong' | null;
 }
 
-const STAFF_HEIGHT = 220;
-const STAFF_SIDE_PADDING = 16;
-const MAX_STAFF_WIDTH = 272;
-const STAFF_SCALE = 1.22;
-const MAX_RENDER_WIDTH = Math.round((MAX_STAFF_WIDTH + STAFF_SIDE_PADDING * 2) / STAFF_SCALE);
+const STAFF_SCALE_X = 1.4;
+const STAFF_SCALE_Y = 2.3;
+const STAFF_HEIGHT = 196;
+const STAFF_CONTAINER_HEIGHT = Math.round(STAFF_HEIGHT * STAFF_SCALE_Y * 0.72);
+const STAFF_SIDE_PADDING = 12;
+const MAX_STAFF_WIDTH = 212;
+const MAX_RENDER_WIDTH = MAX_STAFF_WIDTH + STAFF_SIDE_PADDING * 2;
 let vexflowFontsReady: Promise<void> | null = null;
 
 export default function StaffDisplay({ vexKey, clef, flash }: StaffDisplayProps) {
@@ -63,13 +65,14 @@ export default function StaffDisplay({ vexKey, clef, flash }: StaffDisplayProps)
       const container = containerRef.current;
       container.innerHTML = '';
 
+      const renderWidth = Math.min(width, MAX_RENDER_WIDTH);
       const renderer = new Renderer(container, Renderer.Backends.SVG);
-      renderer.resize(width, STAFF_HEIGHT);
+      renderer.resize(renderWidth, STAFF_HEIGHT);
 
       const context = renderer.getContext();
-      const staveWidth = Math.min(width - STAFF_SIDE_PADDING * 2, MAX_STAFF_WIDTH);
-      const staveX = Math.max(STAFF_SIDE_PADDING, Math.round((width - staveWidth) / 2));
-      const staveY = 44;
+      const staveWidth = Math.min(renderWidth - STAFF_SIDE_PADDING * 2, MAX_STAFF_WIDTH);
+      const staveX = Math.max(STAFF_SIDE_PADDING, Math.round((renderWidth - staveWidth) / 2));
+      const staveY = 30;
       const stave = new Stave(staveX, staveY, staveWidth);
 
       context.setFillStyle(isDark ? '#d4d4d8' : '#18181b');
@@ -96,7 +99,12 @@ export default function StaffDisplay({ vexKey, clef, flash }: StaffDisplayProps)
 
       const svg = container.querySelector('svg');
       if (svg) {
-        svg.style.transform = `scale(${STAFF_SCALE})`;
+        svg.style.display = 'block';
+        svg.style.overflow = 'visible';
+        svg.style.position = 'absolute';
+        svg.style.left = '50%';
+        svg.style.top = '50%';
+        svg.style.transform = `translate(-50%, -50%) scale(${STAFF_SCALE_X}, ${STAFF_SCALE_Y})`;
         svg.style.transformOrigin = 'center center';
       }
     });
@@ -110,11 +118,11 @@ export default function StaffDisplay({ vexKey, clef, flash }: StaffDisplayProps)
   }, [width, vexKey, clef, flash, isDark]);
 
   return (
-    <div className="flex w-full justify-center overflow-visible">
+    <div className="flex w-full justify-center overflow-visible pt-0 pb-1">
       <div
         ref={containerRef}
-        className="w-full"
-        style={{ minHeight: STAFF_HEIGHT, maxWidth: MAX_RENDER_WIDTH }}
+        className="relative w-full overflow-visible"
+        style={{ minHeight: STAFF_CONTAINER_HEIGHT }}
       />
     </div>
   );
