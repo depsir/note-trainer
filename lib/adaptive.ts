@@ -2,7 +2,12 @@ import { Note, AllNoteStats } from './types';
 import { noteId } from './notes';
 
 const DEFAULT_WEIGHT = 1.0;
-const WEIGHT_ON_CORRECT = 0.85;
+/** Weight multiplier for a fast correct answer (≤ 0 ms) */
+const WEIGHT_ON_CORRECT_FAST = 0.85;
+/** Weight multiplier for a slow correct answer (at MAX_RESPONSE_MS) */
+const WEIGHT_ON_CORRECT_SLOW = 1.1;
+/** Response times above this are ignored (user was distracted) */
+const MAX_RESPONSE_MS = 8000;
 const WEIGHT_ON_WRONG = 1.5;
 const MIN_WEIGHT = 0.2;
 const MAX_WEIGHT = 5.0;
@@ -33,15 +38,28 @@ export function pickNote(
   return pool[pool.length - 1];
 }
 
+/**
+ * @param responseTimeMs - ms from note display to answer press.
+ *   If undefined or > MAX_RESPONSE_MS, time is ignored (distracted).
+ */
 export function updateWeight(
   stats: AllNoteStats,
   id: string,
-  wasCorrect: boolean
+  wasCorrect: boolean,
+  responseTimeMs?: number
 ): AllNoteStats {
   const current = stats[id] ?? { correct: 0, wrong: 0, weight: DEFAULT_WEIGHT };
-  const newWeight = wasCorrect
-    ? Math.max(MIN_WEIGHT, current.weight * WEIGHT_ON_CORRECT)
-    : Math.min(MAX_WEIGHT, current.weight * WEIGHT_ON_WRONG);
+
+  let newWeight: number;
+  if (wasCorrect) {
+    // Interpolate: fast answer → strong reduction, slow answer → near-neutral or slight increase
+    const useTime = responseTimeMs !== undefined && responseTimeMs <= MAX_RESPONSE_MS;
+    const t = useTime ? responseTimeMs! / MAX_RESPONSE_MS : 0;
+    const factor = WEIGHT_ON_CORRECT_FAST + (WEIGHT_ON_CORRECT_SLOW - WEIGHT_ON_CORRECT_FAST) * t;
+    newWeight = Math.max(MIN_WEIGHT, current.weight * factor);
+  } else {
+    newWeight = Math.min(MAX_WEIGHT, current.weight * WEIGHT_ON_WRONG);
+  }
 
   return {
     ...stats,

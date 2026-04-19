@@ -33,6 +33,7 @@ export default function HomePage() {
   const [sessionTotal, setSessionTotal] = useState(0);
   const [showConfig, setShowConfig] = useState(false);
   const lastNoteIdRef = useRef<string | undefined>(undefined);
+  const noteShownAtRef = useRef<number>(0);
   const statsRef = useRef(stats);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -48,6 +49,7 @@ export default function HomePage() {
     const note = pickNote(candidates, currentStats, config.useAdaptive, lastNoteIdRef.current);
     lastNoteIdRef.current = noteId(note);
     setCurrentNote(note);
+    noteShownAtRef.current = Date.now();
     setFlash(null);
     setLastAnswer(null);
   }, [getCandidates, config.useAdaptive]);
@@ -82,9 +84,10 @@ export default function HomePage() {
     if (!currentNote || phase !== 'playing') return;
     const correct = letter === currentNote.letter;
     const id = noteId(currentNote);
+    const responseTimeMs = Date.now() - noteShownAtRef.current;
     setLastAnswer({ letter, correct });
     setSessionTotal((t) => t + 1);
-    const newStats = updateWeight(statsRef.current, id, correct);
+    const newStats = updateWeight(statsRef.current, id, correct, responseTimeMs);
     updateStats(newStats);
     if (correct) {
       setSessionCorrect((c) => c + 1);
