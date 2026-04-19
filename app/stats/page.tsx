@@ -4,25 +4,13 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Trash2 } from 'lucide-react';
 import { useNoteStats } from '@/lib/storage';
-import { ALL_NOTES, displayNoteName, noteId } from '@/lib/notes';
+import { ALL_NOTES } from '@/lib/notes';
 import { Clef } from '@/lib/types';
+import InteractiveStaff from '@/components/InteractiveStaff';
 
 function accuracy(correct: number, wrong: number): number {
   const total = correct + wrong;
   return total === 0 ? -1 : Math.round((correct / total) * 100);
-}
-
-function AccuracyBar({ value }: { value: number }) {
-  if (value < 0) return <span className="text-xs text-zinc-400">Nessun dato</span>;
-  const color = value >= 80 ? 'bg-green-500' : value >= 50 ? 'bg-yellow-500' : 'bg-red-500';
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${value}%` }} />
-      </div>
-      <span className="text-xs font-bold w-10 text-right text-zinc-600 dark:text-zinc-400">{value}%</span>
-    </div>
-  );
 }
 
 export default function StatsPage() {
@@ -85,33 +73,19 @@ export default function StatsPage() {
           ))}
         </div>
 
-        {/* Note list */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 divide-y divide-zinc-100 dark:divide-zinc-800 overflow-hidden">
-          {clefNotes.map((note) => {
-            const id = noteId(note);
-            const s = stats[id];
-            const acc = s ? accuracy(s.correct, s.wrong) : -1;
-            const total = s ? s.correct + s.wrong : 0;
-            return (
-              <div key={id} className="px-4 py-3 flex items-center gap-4">
-                <div className="w-12 text-center">
-                  <span className="text-base font-black text-zinc-800 dark:text-zinc-100">
-                    {displayNoteName(note.letter, config.nameSystem)}
-                  </span>
-                  <span className="text-xs text-zinc-400 block">{note.octave}</span>
-                </div>
-                <div className="flex-1">
-                  <AccuracyBar value={acc} />
-                  {total > 0 && (
-                    <p className="text-xs text-zinc-400 mt-0.5">{total} tentativi</p>
-                  )}
-                </div>
-                {note.isLedger && (
-                  <span className="text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-2 py-0.5 rounded-full">+riga</span>
-                )}
-              </div>
-            );
-          })}
+        {/* Note stats on staff */}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-3">
+          <InteractiveStaff
+            notes={clefNotes}
+            clef={activeClef}
+            noteStats={stats}
+            nameSystem={config.nameSystem}
+          />
+          <div className="flex gap-4 justify-center mt-2 text-xs text-zinc-400">
+            <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-green-500" />≥ 80%</span>
+            <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-yellow-500" />50–79%</span>
+            <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-red-500" />{'< 50%'}</span>
+          </div>
         </div>
       </main>
 

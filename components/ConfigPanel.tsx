@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ExerciseConfig } from '@/lib/types';
 import { ALL_NOTES, displayNoteName, noteId } from '@/lib/notes';
 import { X } from 'lucide-react';
+import InteractiveStaff from '@/components/InteractiveStaff';
 
 interface ConfigPanelProps {
   config: ExerciseConfig;
@@ -162,7 +163,7 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
             </button>
           </section>
 
-          {/* Note selection */}
+          {/* Note selection — interactive staff */}
           {draft.clefs.map((clef) => {
             const clefNotes = ALL_NOTES.filter((n) => n.clef === clef);
             const allSelected = clefNotes.every((n) => draft.enabledNotes.includes(noteId(n)));
@@ -179,28 +180,16 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
                     {allSelected ? 'Deseleziona tutte' : 'Seleziona tutte'}
                   </button>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {clefNotes.map((note) => {
-                    const id = noteId(note);
-                    const selected = draft.enabledNotes.includes(id);
-                    return (
-                      <button
-                        key={id}
-                        onClick={() => toggleNote(id)}
-                        className={[
-                          'px-3 py-1.5 rounded-lg text-xs font-bold border-2 transition-colors',
-                          selected
-                            ? 'bg-indigo-600 text-white border-indigo-600'
-                            : 'border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400',
-                        ].join(' ')}
-                      >
-                        {displayNoteName(note.letter, draft.nameSystem)}{note.octave}
-                        {note.isLedger && ' *'}
-                      </button>
-                    );
-                  })}
+                <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 overflow-hidden px-1 py-1">
+                  <InteractiveStaff
+                    notes={clefNotes}
+                    clef={clef}
+                    enabledNotes={new Set(draft.enabledNotes)}
+                    onToggleNote={toggleNote}
+                    nameSystem={draft.nameSystem}
+                  />
                 </div>
-                <p className="text-xs text-zinc-400 mt-1">* riga addizionale</p>
+                <p className="text-xs text-zinc-400 mt-1">Tocca una nota per attivarla / disattivarla</p>
               </section>
             );
           })}
