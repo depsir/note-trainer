@@ -1,4 +1,5 @@
 import { Note, AllNoteStats } from './types';
+import { noteId } from './notes';
 
 const DEFAULT_WEIGHT = 1.0;
 const WEIGHT_ON_CORRECT = 0.85;
@@ -30,10 +31,6 @@ export function pickNote(
     if (rand <= 0) return pool[i];
   }
   return pool[pool.length - 1];
-}
-
-function noteId(note: Note): string {
-  return `${note.vexKey}|${note.clef}`;
 }
 
 export function updateWeight(
