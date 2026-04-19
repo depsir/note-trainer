@@ -144,15 +144,16 @@ export default function HomePage() {
               <span className="text-sm font-semibold text-zinc-500">
                 {sessionCorrect}/{sessionTotal} corrette
               </span>
-              {config.durationSeconds > 0 ? (
-                <span className={['text-sm font-mono font-bold', timeLeft <= 10 ? 'text-red-500' : 'text-zinc-600 dark:text-zinc-400'].join(' ')}>
-                  {formatTime(timeLeft)}
-                </span>
-              ) : (
-                <button onClick={() => setPhase('finished')} className="text-sm text-zinc-400 hover:text-zinc-600 font-semibold">
+              <div className="flex items-center gap-3">
+                {config.durationSeconds > 0 && (
+                  <span className={['text-sm font-mono font-bold', timeLeft <= 10 ? 'text-red-500' : 'text-zinc-600 dark:text-zinc-400'].join(' ')}>
+                    {formatTime(timeLeft)}
+                  </span>
+                )}
+                <button onClick={() => setPhase('finished')} className="text-sm text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 font-semibold">
                   Fine
                 </button>
-              )}
+              </div>
             </div>
 
             <div className="relative w-full bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm border border-zinc-200 dark:border-zinc-800">
@@ -205,7 +206,7 @@ export default function HomePage() {
       </main>
 
       {showConfig && (
-        <ConfigPanel config={config} onSave={updateConfig} onClose={() => setShowConfig(false)} />
+        <ConfigPanel config={config} onSave={updateConfig} onClose={() => setShowConfig(false)} isPlaying={phase === 'playing'} />
       )}
     </div>
   );

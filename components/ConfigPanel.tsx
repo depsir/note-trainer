@@ -9,6 +9,7 @@ interface ConfigPanelProps {
   config: ExerciseConfig;
   onSave: (c: ExerciseConfig) => void;
   onClose: () => void;
+  isPlaying?: boolean;
 }
 
 const DURATION_OPTIONS = [
@@ -19,7 +20,7 @@ const DURATION_OPTIONS = [
   { label: '∞', value: 0 },
 ];
 
-export default function ConfigPanel({ config, onSave, onClose }: ConfigPanelProps) {
+export default function ConfigPanel({ config, onSave, onClose, isPlaying }: ConfigPanelProps) {
   const [draft, setDraft] = useState<ExerciseConfig>({ ...config });
 
   const toggleClef = (clef: 'treble' | 'bass') => {
@@ -77,6 +78,11 @@ export default function ConfigPanel({ config, onSave, onClose }: ConfigPanelProp
         </div>
 
         <div className="overflow-y-auto p-5 space-y-6">
+          {isPlaying && (
+            <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+              ⚠️ Sessione in corso — le modifiche saranno applicate alla prossima sessione.
+            </div>
+          )}
           {/* Duration */}
           <section>
             <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide mb-2">Durata</h3>
