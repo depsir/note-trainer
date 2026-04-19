@@ -13,6 +13,7 @@ import { Note } from '@/lib/types';
 
 type Phase = 'idle' | 'playing' | 'finished';
 type FlashType = 'correct' | 'wrong' | null;
+const CORRECT_FEEDBACK_DELAY_MS = 300;
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -90,7 +91,7 @@ export default function HomePage() {
     if (correct) {
       setSessionCorrect((c) => c + 1);
       setFlash('correct');
-      setTimeout(() => nextNote(newStats), 600);
+      setTimeout(() => nextNote(newStats), CORRECT_FEEDBACK_DELAY_MS);
     } else {
       setFlash('wrong');
     }
