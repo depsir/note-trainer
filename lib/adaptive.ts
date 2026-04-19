@@ -28,6 +28,15 @@ export function pickNote(
     return pool[Math.floor(Math.random() * pool.length)];
   }
 
+  const unseen = pool.filter((note) => {
+    const noteStats = stats[noteId(note)];
+    return !noteStats || noteStats.correct + noteStats.wrong === 0;
+  });
+
+  if (unseen.length > 0) {
+    return unseen[Math.floor(Math.random() * unseen.length)];
+  }
+
   const weights = pool.map((n) => stats[noteId(n)]?.weight ?? DEFAULT_WEIGHT);
   const total = weights.reduce((a, b) => a + b, 0);
   let rand = Math.random() * total;
