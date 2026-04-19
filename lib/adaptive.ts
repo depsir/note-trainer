@@ -71,6 +71,18 @@ export function updateWeight(
   };
 }
 
+const LOG_MIN = Math.log(MIN_WEIGHT);
+const LOG_MAX = Math.log(MAX_WEIGHT);
+
+/**
+ * Maps the adaptive weight to a 0–100 mastery score.
+ * MIN_WEIGHT (0.2) → 100, DEFAULT (1.0) → 50, MAX_WEIGHT (5.0) → 0.
+ */
+export function masteryScore(weight: number): number {
+  const t = (Math.log(weight) - LOG_MIN) / (LOG_MAX - LOG_MIN);
+  return Math.round(Math.max(0, Math.min(100, (1 - t) * 100)));
+}
+
 export function initStats(ids: string[], existing: AllNoteStats): AllNoteStats {
   const result: AllNoteStats = { ...existing };
   for (const id of ids) {

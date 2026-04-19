@@ -82,9 +82,10 @@ export default function StatsPage() {
             nameSystem={config.nameSystem}
           />
           <div className="flex gap-4 justify-center mt-2 text-xs text-zinc-400">
-            <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-green-500" />≥ 80%</span>
-            <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-yellow-500" />50–79%</span>
-            <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-red-500" />{'< 50%'}</span>
+            <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-green-500" />≥ 80</span>
+            <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-yellow-500" />50–79</span>
+            <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-red-500" />{'< 50'}</span>
+            <span className="text-zinc-300 dark:text-zinc-600">· padronanza (velocità + accuratezza)</span>
           </div>
         </div>
       </main>

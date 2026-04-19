@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Note, Clef, NoteStats } from '@/lib/types';
 import { noteId, displayNoteName } from '@/lib/notes';
+import { masteryScore } from '@/lib/adaptive';
 
 /**
  * Step distance from the bottom staff line (step 0 = line 1).
@@ -34,11 +35,6 @@ const CLEF_W = 50;          // space reserved for clef symbol
 
 const STATS_BAR_MAX_H = 65;
 const STATS_BAR_GAP = 34; // gap between bar bottom and staff top line
-
-function computeAccuracy(correct: number, wrong: number): number {
-  const total = correct + wrong;
-  return total === 0 ? -1 : (correct / total) * 100;
-}
 
 function barColor(a: number): string {
   if (a < 0) return '#a1a1aa';
@@ -151,10 +147,10 @@ export default function InteractiveStaff({
           ? (enabled ? '#4f46e5' : labelInactive)
           : labelInactive;
 
-        // Stats
+        // Stats: use weight-based mastery (encodes accuracy + response time)
         const s = noteStats?.[id];
-        const a = s ? computeAccuracy(s.correct, s.wrong) : -1;
         const total = s ? s.correct + s.wrong : 0;
+        const a = (s && total > 0) ? masteryScore(s.weight) : -1;
         const barH = a >= 0 ? (a / 100) * STATS_BAR_MAX_H : 0;
 
         return (
