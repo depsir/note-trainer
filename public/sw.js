@@ -33,6 +33,9 @@ self.addEventListener('fetch', (event) => {
   // Only handle same-origin requests
   if (url.origin !== location.origin) return;
 
+  // Never intercept Next.js internals (HMR, chunks, etc.)
+  if (url.pathname.startsWith('/_next/')) return;
+
   // Navigation requests: network-first, fallback to cache
   if (request.mode === 'navigate') {
     event.respondWith(
