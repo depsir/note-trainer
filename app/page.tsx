@@ -150,8 +150,8 @@ export default function HomePage() {
                     {formatTime(timeLeft)}
                   </span>
                 )}
-                <button onClick={() => setPhase('finished')} className="text-sm px-3 py-1 rounded-lg border border-zinc-300 dark:border-zinc-600 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 font-semibold transition-colors">
-                  Fine
+                <button onClick={() => setPhase('finished')} className="text-sm px-3 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-red-100 dark:hover:bg-red-900 hover:text-red-600 dark:hover:text-red-400 font-semibold transition-colors">
+                  ■ Fine
                 </button>
               </div>
             </div>
