@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { AllNoteStats, ExerciseConfig } from './types';
 import { ALL_NOTES, getDefaultEnabledNotes, noteId } from './notes';
 
-const STATS_KEY = 'note-trainer-stats';
-const CONFIG_KEY = 'note-trainer-config';
+const STATS_KEY = 'note-coach-stats';
+const CONFIG_KEY = 'note-coach-config';
 
 const DEFAULT_CONFIG: ExerciseConfig = {
   durationSeconds: 3 * 60,

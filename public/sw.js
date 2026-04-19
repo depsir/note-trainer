@@ -1,7 +1,7 @@
-// Service Worker for Note Trainer PWA
+// Service Worker for Note Coach PWA
 // Cache-first strategy for app shell assets, network-first for navigation
 
-const CACHE_NAME = 'note-trainer-v1';
+const CACHE_NAME = 'note-coach-v1';
 
 const APP_SHELL = [
   '/',

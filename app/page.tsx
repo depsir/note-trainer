@@ -102,7 +102,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col">
       <header className="flex items-center justify-between px-4 py-3 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
-        <h1 className="text-lg font-black tracking-tight text-indigo-600">🎵 Note Trainer</h1>
+        <h1 className="text-lg font-black tracking-tight text-indigo-600">🎵 Note Coach</h1>
         <div className="flex gap-2">
           <Link href="/stats" className="p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
             <BarChart2 size={20} />

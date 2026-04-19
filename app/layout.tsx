@@ -20,12 +20,12 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Note Trainer",
+  title: "Note Coach",
   description: "Allenati sulla lettura del pentagramma",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Note Trainer",
+    title: "Note Coach",
   },
   formatDetection: { telephone: false },
 };

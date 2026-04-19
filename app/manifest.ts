@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Note Trainer",
-    short_name: "Note Trainer",
+    name: "Note Coach",
+    short_name: "Note Coach",
     description: "Allenati sulla lettura del pentagramma",
     start_url: "/",
     display: "standalone",
