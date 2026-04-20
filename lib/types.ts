@@ -20,6 +20,10 @@ export interface NoteStats {
   wrong: number;
   /** Weight for adaptive selection (higher = shown more often) */
   weight: number;
+  /** Sum of response times for correct answers considered by the adaptive algorithm */
+  correctResponseTimeTotalMs: number;
+  /** Number of correct answers whose response time was considered */
+  timedCorrectResponses: number;
 }
 
 export type AllNoteStats = Record<string, NoteStats>;
