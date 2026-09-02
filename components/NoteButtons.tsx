@@ -28,7 +28,7 @@ export default function NoteButtons({ onSelect, disabled, lastAnswer, nameSystem
               isWrong
                 ? 'bg-red-500 text-white'
                 : 'bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 border-2 border-zinc-200 dark:border-zinc-700',
-              disabled && !isWrong ? 'opacity-60' : 'hover:bg-zinc-100 dark:hover:bg-zinc-700',
+              isWrong ? '' : disabled ? 'opacity-60' : 'hover:bg-zinc-100 dark:hover:bg-zinc-700',
             ].join(' ')}
           >
             {displayNoteName(letter, nameSystem)}

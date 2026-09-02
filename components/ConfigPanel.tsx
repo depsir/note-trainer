@@ -1,10 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { ExerciseConfig } from '@/lib/types';
+import { ExerciseConfig, FifthsQuestionKind } from '@/lib/types';
 import { ALL_NOTES, noteId } from '@/lib/notes';
 import { X } from 'lucide-react';
 import InteractiveStaff from '@/components/InteractiveStaff';
+import {
+  ALL_QUESTION_KINDS,
+  CONFIG_KEY_GRID,
+  displayKeyName,
+  getDefaultEnabledKeys,
+  keyIdsForTypes,
+  QUESTION_KIND_HINT,
+  QUESTION_KIND_LABEL,
+} from '@/lib/fifths';
 
 interface ConfigPanelProps {
   config: ExerciseConfig;
@@ -12,6 +21,14 @@ interface ConfigPanelProps {
   onClose: () => void;
   isPlaying?: boolean;
 }
+
+const MIN_ENABLED_KEYS = 2;
+
+const KEY_PRESETS: { label: string; ids: () => string[] }[] = [
+  { label: 'Tutte', ids: getDefaultEnabledKeys },
+  { label: 'Solo ♯', ids: () => keyIdsForTypes(['sharp']) },
+  { label: 'Solo ♭', ids: () => keyIdsForTypes(['flat']) },
+];
 
 const DURATION_OPTIONS = [
   { label: '1 min', value: 60 },
@@ -67,12 +84,45 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
     setDraft({ ...draft, enabledNotes: [...existing] });
   };
 
+  const toggleQuestionKind = (kind: FifthsQuestionKind) => {
+    const enabled = new Set(draft.fifths.questionKinds);
+    if (enabled.has(kind)) {
+      if (enabled.size <= 1) return; // at least one question kind required
+      enabled.delete(kind);
+    } else {
+      enabled.add(kind);
+    }
+    setDraft({ ...draft, fifths: { ...draft.fifths, questionKinds: [...enabled] } });
+  };
+
+  const toggleKey = (id: string) => {
+    const enabled = new Set(draft.fifths.enabledKeys);
+    if (enabled.has(id)) {
+      if (enabled.size <= MIN_ENABLED_KEYS) return;
+      enabled.delete(id);
+    } else {
+      enabled.add(id);
+    }
+    setDraft({ ...draft, fifths: { ...draft.fifths, enabledKeys: [...enabled] } });
+  };
+
+  const applyKeyPreset = (ids: string[]) => {
+    setDraft({ ...draft, fifths: { ...draft.fifths, enabledKeys: ids } });
+  };
+
+  const isFifths = draft.mode === 'fifths';
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4">
       <div className="bg-white dark:bg-zinc-900 rounded-3xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-zinc-200 dark:border-zinc-700">
-          <h2 className="text-lg font-bold">Impostazioni</h2>
+          <div>
+            <h2 className="text-lg font-bold">Impostazioni</h2>
+            <p className="text-xs text-zinc-400">
+              {isFifths ? 'Circolo delle quinte' : 'Lettura note'}
+            </p>
+          </div>
           <button onClick={onClose} className="p-1 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800">
             <X size={20} />
           </button>
@@ -124,6 +174,9 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
                 </button>
               ))}
             </div>
+            {isFifths && (
+              <p className="text-xs text-zinc-400 mt-1">Chiavi in cui viene disegnata l’armatura</p>
+            )}
           </section>
 
           {/* Note name system */}
@@ -147,7 +200,8 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
             </div>
           </section>
 
-          {/* Adaptive */}
+          {/* Adaptive — adaptive weighting only applies to note reading */}
+          {!isFifths && (
           <section>
             <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide mb-2">Apprendimento adattivo</h3>
             <button
@@ -162,9 +216,85 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
               {draft.useAdaptive ? '✓ Attivo — propone più le note difficili' : 'Disattivo — casuale uniforme'}
             </button>
           </section>
+          )}
+
+          {/* Circle-of-fifths question kinds */}
+          {isFifths && (
+            <section>
+              <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide mb-2">Domande</h3>
+              <div className="flex flex-col gap-2">
+                {ALL_QUESTION_KINDS.map((kind) => {
+                  const enabled = draft.fifths.questionKinds.includes(kind);
+                  return (
+                    <button
+                      key={kind}
+                      onClick={() => toggleQuestionKind(kind)}
+                      className={[
+                        'w-full px-4 py-2 rounded-xl text-left border-2 transition-colors',
+                        enabled
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300',
+                      ].join(' ')}
+                    >
+                      <span className="block text-sm font-semibold">{QUESTION_KIND_LABEL[kind]}</span>
+                      <span className={['block text-xs', enabled ? 'text-indigo-100' : 'text-zinc-400'].join(' ')}>
+                        {QUESTION_KIND_HINT[kind]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Circle-of-fifths key pool */}
+          {isFifths && (
+            <section>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide">Tonalità</h3>
+                <div className="flex gap-2">
+                  {KEY_PRESETS.map((preset) => (
+                    <button
+                      key={preset.label}
+                      onClick={() => applyKeyPreset(preset.ids())}
+                      className="text-xs text-indigo-600 font-semibold"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-7 gap-1.5">
+                {CONFIG_KEY_GRID.flatMap((row) =>
+                  row.cells.map((key, column) =>
+                    key ? (
+                      <button
+                        key={key.id}
+                        onClick={() => toggleKey(key.id)}
+                        aria-pressed={draft.fifths.enabledKeys.includes(key.id)}
+                        className={[
+                          'h-10 rounded-lg text-sm font-semibold border-2 transition-colors',
+                          draft.fifths.enabledKeys.includes(key.id)
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'border-zinc-200 dark:border-zinc-700 text-zinc-400',
+                        ].join(' ')}
+                      >
+                        {displayKeyName(key, draft.nameSystem)}
+                      </button>
+                    ) : (
+                      <div key={`${row.accidental}-${column}`} aria-hidden />
+                    )
+                  )
+                )}
+              </div>
+              <p className="text-xs text-zinc-400 mt-1">
+                {draft.fifths.enabledKeys.length} tonalità attive — tocca per escluderle
+              </p>
+            </section>
+          )}
 
           {/* Note selection — interactive staff */}
-          {draft.clefs.map((clef) => {
+          {!isFifths && draft.clefs.map((clef) => {
             const clefNotes = ALL_NOTES.filter((n) => n.clef === clef);
             const allSelected = clefNotes.every((n) => draft.enabledNotes.includes(noteId(n)));
             return (

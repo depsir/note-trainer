@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { usePrefersDark } from '@/lib/client';
+import { loadVexFlow } from '@/lib/vexflow';
 import { Clef } from '@/lib/types';
 
 interface StaffDisplayProps {
@@ -17,7 +18,6 @@ const STAFF_CONTAINER_HEIGHT = Math.round(STAFF_HEIGHT * STAFF_SCALE_Y * 0.72);
 const STAFF_SIDE_PADDING = 12;
 const MAX_STAFF_WIDTH = 212;
 const MAX_RENDER_WIDTH = MAX_STAFF_WIDTH + STAFF_SIDE_PADDING * 2;
-let vexflowFontsReady: Promise<void> | null = null;
 
 export default function StaffDisplay({ vexKey, clef, flash }: StaffDisplayProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -50,16 +50,7 @@ export default function StaffDisplay({ vexKey, clef, flash }: StaffDisplayProps)
           ? '#d4d4d8'
           : '#18181b';
 
-    void import('vexflow').then(async ({ Formatter, Renderer, Stave, StaveNote, VexFlow, Voice }) => {
-      if (cancelled || !containerRef.current) return;
-
-      if (!vexflowFontsReady) {
-        vexflowFontsReady = VexFlow.loadFonts('Bravura', 'Academico').then(() => {
-          VexFlow.setFonts('Bravura', 'Academico');
-        });
-      }
-
-      await vexflowFontsReady;
+    void loadVexFlow().then(({ Formatter, Renderer, Stave, StaveNote, Voice }) => {
       if (cancelled || !containerRef.current) return;
 
       const container = containerRef.current;

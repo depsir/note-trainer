@@ -4,6 +4,7 @@ import { useCallback, useSyncExternalStore } from 'react';
 import { useHydrated } from './client';
 import { AllNoteStats, ExerciseConfig } from './types';
 import { ALL_NOTES, getDefaultEnabledNotes, noteId } from './notes';
+import { ALL_QUESTION_KINDS, getDefaultEnabledKeys } from './fifths';
 
 const STATS_KEY = 'note-coach-stats';
 const CONFIG_KEY = 'note-coach-config';
@@ -11,11 +12,16 @@ const STORAGE_EVENT = 'note-coach-storage';
 const EMPTY_STATS: AllNoteStats = {};
 
 const DEFAULT_CONFIG: ExerciseConfig = {
+  mode: 'notes',
   durationSeconds: 3 * 60,
   clefs: ['treble', 'bass'],
   enabledNotes: getDefaultEnabledNotes(['treble', 'bass']),
   useAdaptive: true,
   nameSystem: 'italian',
+  fifths: {
+    questionKinds: [...ALL_QUESTION_KINDS],
+    enabledKeys: getDefaultEnabledKeys(),
+  },
 };
 
 function loadJSON<T>(key: string, fallback: T): T {
@@ -82,8 +88,13 @@ function getConfigSnapshot() {
   if (raw === cachedConfigRaw) return cachedConfigValue;
 
   cachedConfigRaw = raw;
-  const savedConfig = raw ? loadJSON<ExerciseConfig>(CONFIG_KEY, DEFAULT_CONFIG) : DEFAULT_CONFIG;
-  cachedConfigValue = { ...DEFAULT_CONFIG, ...savedConfig };
+  const savedConfig = raw ? loadJSON<Partial<ExerciseConfig>>(CONFIG_KEY, DEFAULT_CONFIG) : DEFAULT_CONFIG;
+  cachedConfigValue = {
+    ...DEFAULT_CONFIG,
+    ...savedConfig,
+    // Nested section needs its own merge so configs saved before it existed still get defaults.
+    fifths: { ...DEFAULT_CONFIG.fifths, ...savedConfig.fifths },
+  };
   return cachedConfigValue;
 }
 
