@@ -5,6 +5,7 @@ import { useHydrated } from './client';
 import { AllNoteStats, ExerciseConfig } from './types';
 import { ALL_NOTES, getDefaultEnabledNotes, noteId } from './notes';
 import { ALL_QUESTION_KINDS, getDefaultEnabledKeys } from './fifths';
+import { getDefaultEnabledDegrees } from './intervals';
 
 const STATS_KEY = 'note-coach-stats';
 const CONFIG_KEY = 'note-coach-config';
@@ -21,6 +22,10 @@ const DEFAULT_CONFIG: ExerciseConfig = {
   fifths: {
     questionKinds: [...ALL_QUESTION_KINDS],
     enabledKeys: getDefaultEnabledKeys(),
+  },
+  intervals: {
+    enabledDegrees: getDefaultEnabledDegrees(),
+    presentation: 'staff',
   },
 };
 
@@ -92,8 +97,9 @@ function getConfigSnapshot() {
   cachedConfigValue = {
     ...DEFAULT_CONFIG,
     ...savedConfig,
-    // Nested section needs its own merge so configs saved before it existed still get defaults.
+    // Nested sections need their own merge so configs saved before they existed still get defaults.
     fifths: { ...DEFAULT_CONFIG.fifths, ...savedConfig.fifths },
+    intervals: { ...DEFAULT_CONFIG.intervals, ...savedConfig.intervals },
   };
   return cachedConfigValue;
 }

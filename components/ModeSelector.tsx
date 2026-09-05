@@ -10,6 +10,8 @@ interface ModeSelectorProps {
 const MODES: { id: TrainingMode; glyph: string; title: string; subtitle: string }[] = [
   { id: 'notes', glyph: '𝄞', title: 'Lettura note', subtitle: 'Riconosci le note sul pentagramma' },
   { id: 'fifths', glyph: '♯♭', title: 'Circolo delle quinte', subtitle: 'Armature e alterazioni' },
+  { id: 'intervals-major', glyph: 'M3', title: 'Intervalli maggiori', subtitle: 'Solo giusti e maggiori' },
+  { id: 'intervals-any', glyph: 'm3', title: 'Intervalli', subtitle: 'Qualsiasi, fino a dim/ecc.' },
 ];
 
 export default function ModeSelector({ mode, onChange }: ModeSelectorProps) {

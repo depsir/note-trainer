@@ -2,12 +2,18 @@ export type Clef = 'treble' | 'bass';
 
 export type NoteNameSystem = 'italian' | 'english';
 
-export type TrainingMode = 'notes' | 'fifths';
+export type TrainingMode = 'notes' | 'fifths' | 'intervals-major' | 'intervals-any';
 
 export type AccidentalType = 'none' | 'sharp' | 'flat';
 
 /** Which way round a circle-of-fifths question is asked */
 export type FifthsQuestionKind = 'signature-to-key' | 'key-to-count';
+
+/** Interval quality; not every value applies to every degree — see lib/intervals.ts */
+export type IntervalQuality = 'diminished' | 'minor' | 'perfect' | 'major' | 'augmented';
+
+/** How an interval question is presented: two notes on the staff, or their letter names */
+export type IntervalPresentation = 'staff' | 'letters';
 
 export interface MajorKey {
   /** Stable id, also the VexFlow key spec, e.g. "F#" */
@@ -55,6 +61,13 @@ export interface FifthsConfig {
   enabledKeys: string[];
 }
 
+export interface IntervalsConfig {
+  /** Interval numbers to include (subset of 2-8) */
+  enabledDegrees: number[];
+  /** How the question is displayed */
+  presentation: IntervalPresentation;
+}
+
 export interface ExerciseConfig {
   /** Which exercise the trainer runs */
   mode: TrainingMode;
@@ -70,6 +83,8 @@ export interface ExerciseConfig {
   nameSystem: NoteNameSystem;
   /** Circle-of-fifths mode settings */
   fifths: FifthsConfig;
+  /** Interval training mode settings */
+  intervals: IntervalsConfig;
 }
 
 export interface SessionResult {

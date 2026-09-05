@@ -1,33 +1,32 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
-import AccidentalCountButtons from '@/components/AccidentalCountButtons';
-import KeyButtons from '@/components/KeyButtons';
-import KeySignatureDisplay from '@/components/KeySignatureDisplay';
+import { useCallback, useState } from 'react';
+import IntervalButtons from '@/components/IntervalButtons';
+import IntervalStaffDisplay from '@/components/IntervalStaffDisplay';
 import SessionHud from '@/components/SessionHud';
 import SessionSummary from '@/components/SessionSummary';
 import {
-  availableAccidentalTypes,
-  displayKeyName,
-  FifthsQuestion,
-  keyGridForPool,
-  MAJOR_KEYS,
-  pickQuestion,
+  buildIntervalGrid,
+  displayEndpointName,
+  gridRowsForMode,
+  IntervalQuestion,
+  intervalQuestionId,
+  pickIntervalQuestion,
   questionAnswerId,
-  questionId,
-  QUESTION_KIND_LABEL,
-} from '@/lib/fifths';
+  rootVexKey,
+  targetVexKey,
+} from '@/lib/intervals';
 import { CORRECT_FEEDBACK_DELAY_MS, FlashType, formatTime, SessionPhase, useSessionClock } from '@/lib/session';
 import { ExerciseConfig } from '@/lib/types';
 
-interface FifthsTrainerProps {
+interface IntervalTrainerProps {
   config: ExerciseConfig;
   phase: SessionPhase;
   onPhaseChange: (phase: SessionPhase) => void;
 }
 
-export default function FifthsTrainer({ config, phase, onPhaseChange }: FifthsTrainerProps) {
-  const [question, setQuestion] = useState<FifthsQuestion | null>(null);
+export default function IntervalTrainer({ config, phase, onPhaseChange }: IntervalTrainerProps) {
+  const [question, setQuestion] = useState<IntervalQuestion | null>(null);
   const [flash, setFlash] = useState<FlashType>(null);
   const [wrongAnswerId, setWrongAnswerId] = useState<string | null>(null);
   const [sessionCorrect, setSessionCorrect] = useState(0);
@@ -40,19 +39,15 @@ export default function FifthsTrainer({ config, phase, onPhaseChange }: FifthsTr
     onPhaseChange('finished');
   }, [stopClock, onPhaseChange]);
 
-  const keys = useMemo(
-    () => MAJOR_KEYS.filter((key) => config.fifths.enabledKeys.includes(key.id)),
-    [config.fifths.enabledKeys]
-  );
-  const keyGrid = useMemo(() => keyGridForPool(keys), [keys]);
-  const countTypes = useMemo(() => availableAccidentalTypes(keys), [keys]);
+  const gridRows = buildIntervalGrid(gridRowsForMode(config.mode));
+  const enabledDegrees = config.intervals.enabledDegrees;
 
   const nextQuestion = useCallback((previousId?: string) => {
-    if (keys.length === 0 || config.fifths.questionKinds.length === 0) return;
-    setQuestion(pickQuestion(keys, config.fifths.questionKinds, config.clefs, previousId));
+    if (enabledDegrees.length === 0) return;
+    setQuestion(pickIntervalQuestion(config.clefs, enabledDegrees, config.mode, previousId));
     setFlash(null);
     setWrongAnswerId(null);
-  }, [keys, config.fifths.questionKinds, config.clefs]);
+  }, [enabledDegrees, config.clefs, config.mode]);
 
   const startSession = useCallback(() => {
     setSessionCorrect(0);
@@ -70,7 +65,7 @@ export default function FifthsTrainer({ config, phase, onPhaseChange }: FifthsTr
       setSessionCorrect((c) => c + 1);
       setWrongAnswerId(null);
       setFlash('correct');
-      const currentId = questionId(question);
+      const currentId = intervalQuestionId(question);
       setTimeout(() => nextQuestion(currentId), CORRECT_FEEDBACK_DELAY_MS);
     } else {
       setWrongAnswerId(answerId);
@@ -79,25 +74,24 @@ export default function FifthsTrainer({ config, phase, onPhaseChange }: FifthsTr
   }, [question, phase, nextQuestion]);
 
   if (phase === 'idle') {
-    const kindSummary = config.fifths.questionKinds.map((kind) => QUESTION_KIND_LABEL[kind]).join(' · ');
     return (
       <div className="flex flex-col items-center gap-6 w-full">
         <div className="text-center space-y-1">
-          <p className="text-zinc-500 text-sm">{kindSummary || 'Nessuna domanda selezionata'}</p>
+          <p className="text-zinc-500 text-sm">
+            {config.mode === 'intervals-major' ? 'Solo intervalli giusti e maggiori' : 'Tutti gli intervalli, fino a diminuiti/aumentati'}
+          </p>
           <p className="text-zinc-400 text-sm">
             {config.durationSeconds === 0 ? 'Tempo illimitato' : formatTime(config.durationSeconds)}
-            {' · '}{keys.length} tonalità
-            {' · '}{config.nameSystem === 'italian' ? 'Do Re Mi' : 'C D E'}
+            {' · '}{enabledDegrees.length} gradi
+            {' · '}{config.intervals.presentation === 'staff' ? 'Pentagramma' : 'Nomi delle note'}
           </p>
         </div>
         <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm border border-zinc-200 dark:border-zinc-800">
-          <div className="mx-auto w-full max-w-[19rem]">
-            <KeySignatureDisplay keySpec="A" clef="treble" />
-          </div>
+          <IntervalStaffDisplay rootVexKey="c/4" targetVexKey="e/4" clef="treble" />
         </div>
         <button
           onClick={startSession}
-          disabled={keys.length === 0 || config.fifths.questionKinds.length === 0}
+          disabled={enabledDegrees.length === 0}
           className="w-full max-w-xs py-4 bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:opacity-50 disabled:active:scale-100 text-white text-xl font-black rounded-2xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
         >
           Inizia
@@ -119,7 +113,7 @@ export default function FifthsTrainer({ config, phase, onPhaseChange }: FifthsTr
 
   if (!question) return null;
 
-  const isSignatureQuestion = question.kind === 'signature-to-key';
+  const isStaff = config.intervals.presentation === 'staff';
 
   return (
     <>
@@ -132,23 +126,25 @@ export default function FifthsTrainer({ config, phase, onPhaseChange }: FifthsTr
       />
 
       <div className="relative w-full min-h-52 flex items-center justify-center bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm border border-zinc-200 dark:border-zinc-800">
-        {isSignatureQuestion ? (
-          <div className="mx-auto w-full max-w-[19rem]">
-            <KeySignatureDisplay keySpec={question.key.id} clef={question.clef} flash={flash} />
+        {isStaff ? (
+          <div className="w-full">
+            <IntervalStaffDisplay
+              rootVexKey={rootVexKey(question)}
+              targetVexKey={targetVexKey(question)}
+              clef={question.clef}
+              flash={flash}
+            />
           </div>
         ) : (
-          <div className="text-center">
-            <p className={[
-              'text-6xl font-black tracking-tight',
-              flash === 'correct' ? 'text-green-500' : flash === 'wrong' ? 'text-red-500' : 'text-zinc-800 dark:text-zinc-100',
-            ].join(' ')}>
-              {displayKeyName(question.key, config.nameSystem)}
-            </p>
-            <p className="text-sm font-semibold text-zinc-400 mt-2">maggiore</p>
-          </div>
+          <p className={[
+            'text-4xl font-black tracking-tight text-center',
+            flash === 'correct' ? 'text-green-500' : flash === 'wrong' ? 'text-red-500' : 'text-zinc-800 dark:text-zinc-100',
+          ].join(' ')}>
+            {displayEndpointName(question.root, config.nameSystem)}
+            {' – '}
+            {displayEndpointName(question.target, config.nameSystem)}
+          </p>
         )}
-        {/* Corner badge, not a centred overlay: the question itself already tints
-            green/red, and a full-size mark would sit on top of the accidentals. */}
         {flash && (
           <div className={[
             'absolute top-3 right-4 pointer-events-none text-3xl font-black leading-none',
@@ -160,27 +156,15 @@ export default function FifthsTrainer({ config, phase, onPhaseChange }: FifthsTr
       </div>
 
       <p className="text-sm font-semibold text-zinc-500 -mt-2 text-center">
-        {isSignatureQuestion
-          ? `Che tonalità è? ${question.clef === 'treble' ? '(Violino)' : '(Basso)'}`
-          : 'Quante alterazioni ha?'}
+        Che intervallo è? {isStaff ? (question.clef === 'treble' ? '(Violino)' : '(Basso)') : ''}
       </p>
 
-      {isSignatureQuestion ? (
-        <KeyButtons
-          rows={keyGrid}
-          onSelect={handleAnswer}
-          disabled={flash === 'correct'}
-          wrongKeyId={wrongAnswerId}
-          nameSystem={config.nameSystem}
-        />
-      ) : (
-        <AccidentalCountButtons
-          types={countTypes}
-          onSelect={handleAnswer}
-          disabled={flash === 'correct'}
-          wrongAnswerId={wrongAnswerId}
-        />
-      )}
+      <IntervalButtons
+        rows={gridRows}
+        onSelect={handleAnswer}
+        disabled={flash === 'correct'}
+        wrongAnswerId={wrongAnswerId}
+      />
     </>
   );
 }

@@ -106,7 +106,15 @@ export default function NotesTrainer({ config, phase, onPhaseChange }: NotesTrai
   }
 
   if (phase === 'finished') {
-    return <SessionSummary correct={sessionCorrect} total={sessionTotal} onRestart={startSession} showStatsLink />;
+    return (
+      <SessionSummary
+        correct={sessionCorrect}
+        total={sessionTotal}
+        onRestart={startSession}
+        onHome={() => onPhaseChange('idle')}
+        showStatsLink
+      />
+    );
   }
 
   if (!currentNote) return null;

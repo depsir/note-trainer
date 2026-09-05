@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ExerciseConfig, FifthsQuestionKind } from '@/lib/types';
+import { ExerciseConfig, FifthsQuestionKind, IntervalPresentation } from '@/lib/types';
 import { ALL_NOTES, noteId } from '@/lib/notes';
 import { X } from 'lucide-react';
 import InteractiveStaff from '@/components/InteractiveStaff';
@@ -14,6 +14,7 @@ import {
   QUESTION_KIND_HINT,
   QUESTION_KIND_LABEL,
 } from '@/lib/fifths';
+import { ALL_DEGREES, displayDegreeOrdinal } from '@/lib/intervals';
 
 interface ConfigPanelProps {
   config: ExerciseConfig;
@@ -23,6 +24,7 @@ interface ConfigPanelProps {
 }
 
 const MIN_ENABLED_KEYS = 2;
+const MIN_ENABLED_DEGREES = 1;
 
 const KEY_PRESETS: { label: string; ids: () => string[] }[] = [
   { label: 'Tutte', ids: getDefaultEnabledKeys },
@@ -110,7 +112,23 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
     setDraft({ ...draft, fifths: { ...draft.fifths, enabledKeys: ids } });
   };
 
+  const toggleDegree = (degree: number) => {
+    const enabled = new Set(draft.intervals.enabledDegrees);
+    if (enabled.has(degree)) {
+      if (enabled.size <= MIN_ENABLED_DEGREES) return;
+      enabled.delete(degree);
+    } else {
+      enabled.add(degree);
+    }
+    setDraft({ ...draft, intervals: { ...draft.intervals, enabledDegrees: [...enabled].sort((a, b) => a - b) } });
+  };
+
+  const setPresentation = (presentation: IntervalPresentation) => {
+    setDraft({ ...draft, intervals: { ...draft.intervals, presentation } });
+  };
+
   const isFifths = draft.mode === 'fifths';
+  const isIntervals = draft.mode === 'intervals-major' || draft.mode === 'intervals-any';
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4">
@@ -120,7 +138,11 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
           <div>
             <h2 className="text-lg font-bold">Impostazioni</h2>
             <p className="text-xs text-zinc-400">
-              {isFifths ? 'Circolo delle quinte' : 'Lettura note'}
+              {isFifths
+                ? 'Circolo delle quinte'
+                : isIntervals
+                  ? draft.mode === 'intervals-major' ? 'Intervalli maggiori' : 'Intervalli'
+                  : 'Lettura note'}
             </p>
           </div>
           <button onClick={onClose} className="p-1 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800">
@@ -201,7 +223,7 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
           </section>
 
           {/* Adaptive — adaptive weighting only applies to note reading */}
-          {!isFifths && (
+          {draft.mode === 'notes' && (
           <section>
             <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide mb-2">Apprendimento adattivo</h3>
             <button
@@ -293,8 +315,58 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
             </section>
           )}
 
+          {/* Interval presentation */}
+          {isIntervals && (
+            <section>
+              <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide mb-2">Come mostrarlo</h3>
+              <div className="flex gap-3">
+                {(['staff', 'letters'] as const).map((presentation) => (
+                  <button
+                    key={presentation}
+                    onClick={() => setPresentation(presentation)}
+                    className={[
+                      'flex-1 py-2 rounded-xl text-sm font-semibold border-2 transition-colors',
+                      draft.intervals.presentation === presentation
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300',
+                    ].join(' ')}
+                  >
+                    {presentation === 'staff' ? 'Pentagramma' : 'Nomi delle note'}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Interval degrees pool */}
+          {isIntervals && (
+            <section>
+              <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide mb-2">Gradi</h3>
+              <div className="grid grid-cols-7 gap-1.5">
+                {ALL_DEGREES.map((degree) => (
+                  <button
+                    key={degree}
+                    onClick={() => toggleDegree(degree)}
+                    aria-pressed={draft.intervals.enabledDegrees.includes(degree)}
+                    className={[
+                      'h-10 rounded-lg text-sm font-semibold border-2 transition-colors',
+                      draft.intervals.enabledDegrees.includes(degree)
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'border-zinc-200 dark:border-zinc-700 text-zinc-400',
+                    ].join(' ')}
+                  >
+                    {displayDegreeOrdinal(degree)}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-zinc-400 mt-1">
+                {draft.intervals.enabledDegrees.length} gradi attivi — tocca per escluderli
+              </p>
+            </section>
+          )}
+
           {/* Note selection — interactive staff */}
-          {!isFifths && draft.clefs.map((clef) => {
+          {!isFifths && !isIntervals && draft.clefs.map((clef) => {
             const clefNotes = ALL_NOTES.filter((n) => n.clef === clef);
             const allSelected = clefNotes.every((n) => draft.enabledNotes.includes(noteId(n)));
             return (

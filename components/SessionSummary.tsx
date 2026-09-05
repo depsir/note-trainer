@@ -6,11 +6,12 @@ interface SessionSummaryProps {
   correct: number;
   total: number;
   onRestart: () => void;
+  onHome: () => void;
   /** Only note reading keeps per-item stats worth linking to */
   showStatsLink?: boolean;
 }
 
-export default function SessionSummary({ correct, total, onRestart, showStatsLink }: SessionSummaryProps) {
+export default function SessionSummary({ correct, total, onRestart, onHome, showStatsLink }: SessionSummaryProps) {
   return (
     <div className="flex flex-col items-center gap-6 w-full text-center">
       <div className="text-6xl">🎉</div>
@@ -23,15 +24,20 @@ export default function SessionSummary({ correct, total, onRestart, showStatsLin
           </p>
         )}
       </div>
-      <div className="flex gap-3 w-full max-w-xs">
-        <button onClick={onRestart} className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl transition-colors">
+      <div className="flex flex-col gap-3 w-full max-w-xs">
+        <button onClick={onRestart} className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl transition-colors">
           Ancora
         </button>
-        {showStatsLink && (
-          <Link href="/stats" className="flex-1 py-3 bg-white dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-bold rounded-2xl text-center hover:bg-zinc-50">
-            Statistiche
-          </Link>
-        )}
+        <div className="flex gap-3">
+          <button onClick={onHome} className="flex-1 py-3 bg-white dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-bold rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors">
+            Home
+          </button>
+          {showStatsLink && (
+            <Link href="/stats" className="flex-1 py-3 bg-white dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-bold rounded-2xl text-center hover:bg-zinc-50 dark:hover:bg-zinc-700">
+              Statistiche
+            </Link>
+          )}
+        </div>
       </div>
     </div>
   );

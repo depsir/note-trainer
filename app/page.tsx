@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { BarChart2, Settings } from 'lucide-react';
 import ConfigPanel from '@/components/ConfigPanel';
 import FifthsTrainer from '@/components/FifthsTrainer';
+import IntervalTrainer from '@/components/IntervalTrainer';
 import ModeSelector from '@/components/ModeSelector';
 import NotesTrainer from '@/components/NotesTrainer';
 import { useNoteStats } from '@/lib/storage';
@@ -44,6 +45,8 @@ export default function HomePage() {
 
         {config.mode === 'fifths' ? (
           <FifthsTrainer config={config} phase={phase} onPhaseChange={setPhase} />
+        ) : config.mode === 'intervals-major' || config.mode === 'intervals-any' ? (
+          <IntervalTrainer config={config} phase={phase} onPhaseChange={setPhase} />
         ) : (
           <NotesTrainer config={config} phase={phase} onPhaseChange={setPhase} />
         )}
