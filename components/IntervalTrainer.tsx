@@ -86,9 +86,6 @@ export default function IntervalTrainer({ config, phase, onPhaseChange }: Interv
             {' · '}{config.intervals.presentation === 'staff' ? 'Pentagramma' : 'Nomi delle note'}
           </p>
         </div>
-        <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm border border-zinc-200 dark:border-zinc-800">
-          <IntervalStaffDisplay rootVexKey="c/4" targetVexKey="e/4" clef="treble" />
-        </div>
         <button
           onClick={startSession}
           disabled={enabledDegrees.length === 0}

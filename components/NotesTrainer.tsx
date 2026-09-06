@@ -92,9 +92,6 @@ export default function NotesTrainer({ config, phase, onPhaseChange }: NotesTrai
             {' · '}{config.nameSystem === 'italian' ? 'Do Re Mi' : 'C D E'}
           </p>
         </div>
-        <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm border border-zinc-200 dark:border-zinc-800">
-          <StaffDisplay vexKey="b/4" clef="treble" />
-        </div>
         <button
           onClick={startSession}
           className="w-full max-w-xs py-4 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xl font-black rounded-2xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none"

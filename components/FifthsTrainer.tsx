@@ -90,11 +90,6 @@ export default function FifthsTrainer({ config, phase, onPhaseChange }: FifthsTr
             {' · '}{config.nameSystem === 'italian' ? 'Do Re Mi' : 'C D E'}
           </p>
         </div>
-        <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm border border-zinc-200 dark:border-zinc-800">
-          <div className="mx-auto w-full max-w-[19rem]">
-            <KeySignatureDisplay keySpec="A" clef="treble" />
-          </div>
-        </div>
         <button
           onClick={startSession}
           disabled={keys.length === 0 || config.fifths.questionKinds.length === 0}
