@@ -2,9 +2,15 @@ export type Clef = 'treble' | 'bass';
 
 export type NoteNameSystem = 'italian' | 'english';
 
-export type TrainingMode = 'notes' | 'fifths' | 'intervals-major' | 'intervals-any';
+export type TrainingMode = 'notes' | 'fifths' | 'intervals-major' | 'intervals-any' | 'scales';
 
 export type AccidentalType = 'none' | 'sharp' | 'flat';
+
+/** An accidental as it is written in a note name: sharp, flat, or nothing. */
+export type AccidentalSign = '' | '#' | 'b';
+
+/** The four scale shapes this app drills */
+export type ScaleType = 'major' | 'minor-natural' | 'minor-harmonic' | 'minor-melodic';
 
 /** Which way round a circle-of-fifths question is asked */
 export type FifthsQuestionKind = 'signature-to-key' | 'key-to-count';
@@ -21,7 +27,7 @@ export interface MajorKey {
   /** Letter name A-G */
   letter: string;
   /** Accidental in the key name */
-  accidental: '' | '#' | 'b';
+  accidental: AccidentalSign;
   /** How many accidentals the key signature carries, 0-7 */
   count: number;
   /** Which kind of accidental the signature uses */
@@ -68,6 +74,13 @@ export interface IntervalsConfig {
   presentation: IntervalPresentation;
 }
 
+export interface ScalesConfig {
+  /** Which scale shapes to ask */
+  enabledTypes: ScaleType[];
+  /** Tonic ids to include (subset of ALL_TONIC_IDS) */
+  enabledTonics: string[];
+}
+
 export interface ExerciseConfig {
   /** Which exercise the trainer runs */
   mode: TrainingMode;
@@ -85,6 +98,8 @@ export interface ExerciseConfig {
   fifths: FifthsConfig;
   /** Interval training mode settings */
   intervals: IntervalsConfig;
+  /** Scale training mode settings */
+  scales: ScalesConfig;
 }
 
 export interface SessionResult {

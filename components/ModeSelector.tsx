@@ -10,6 +10,7 @@ interface ModeSelectorProps {
 const MODES: { id: TrainingMode; glyph: string; title: string; subtitle: string }[] = [
   { id: 'notes', glyph: '𝄞', title: 'Lettura note', subtitle: 'Riconosci le note sul pentagramma' },
   { id: 'fifths', glyph: '♯♭', title: 'Circolo delle quinte', subtitle: 'Armature e alterazioni' },
+  { id: 'scales', glyph: '♪↗', title: 'Scale', subtitle: 'Le note in ordine, magg. e min.' },
   { id: 'intervals-major', glyph: 'M3', title: 'Intervalli maggiori', subtitle: 'Solo giusti e maggiori' },
   { id: 'intervals-any', glyph: 'm3', title: 'Intervalli', subtitle: 'Qualsiasi, fino a dim/ecc.' },
 ];
@@ -17,8 +18,10 @@ const MODES: { id: TrainingMode; glyph: string; title: string; subtitle: string 
 export default function ModeSelector({ mode, onChange }: ModeSelectorProps) {
   return (
     <div className="grid grid-cols-2 gap-3 w-full">
-      {MODES.map((option) => {
+      {MODES.map((option, index) => {
         const selected = option.id === mode;
+        // An odd number of modes would leave a half-width gap: the last one takes the whole row
+        const fullWidth = MODES.length % 2 === 1 && index === MODES.length - 1;
         return (
           <button
             key={option.id}
@@ -26,6 +29,7 @@ export default function ModeSelector({ mode, onChange }: ModeSelectorProps) {
             aria-pressed={selected}
             className={[
               'flex flex-col items-center gap-1 px-3 py-4 rounded-2xl border-2 text-center transition-colors',
+              fullWidth ? 'col-span-2' : '',
               selected
                 ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/40'
                 : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800',

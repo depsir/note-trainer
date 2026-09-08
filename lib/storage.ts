@@ -6,6 +6,7 @@ import { AllNoteStats, ExerciseConfig } from './types';
 import { ALL_NOTES, getDefaultEnabledNotes, noteId } from './notes';
 import { ALL_QUESTION_KINDS, getDefaultEnabledKeys } from './fifths';
 import { getDefaultEnabledDegrees } from './intervals';
+import { ALL_SCALE_TYPES, getDefaultEnabledTonics } from './scales';
 
 const STATS_KEY = 'note-coach-stats';
 const CONFIG_KEY = 'note-coach-config';
@@ -26,6 +27,10 @@ const DEFAULT_CONFIG: ExerciseConfig = {
   intervals: {
     enabledDegrees: getDefaultEnabledDegrees(),
     presentation: 'staff',
+  },
+  scales: {
+    enabledTypes: [...ALL_SCALE_TYPES],
+    enabledTonics: getDefaultEnabledTonics(),
   },
 };
 
@@ -100,6 +105,7 @@ function getConfigSnapshot() {
     // Nested sections need their own merge so configs saved before they existed still get defaults.
     fifths: { ...DEFAULT_CONFIG.fifths, ...savedConfig.fifths },
     intervals: { ...DEFAULT_CONFIG.intervals, ...savedConfig.intervals },
+    scales: { ...DEFAULT_CONFIG.scales, ...savedConfig.scales },
   };
   return cachedConfigValue;
 }

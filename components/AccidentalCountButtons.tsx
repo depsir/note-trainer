@@ -16,7 +16,7 @@ const COUNTS = Array.from({ length: MAX_ACCIDENTALS }, (_, i) => i + 1);
 const ZERO_ID = countAnswerId(0, 'none');
 
 /**
- * A signed count keypad: flats above, sharps below, "0" in the middle. The sign matters
+ * A signed count keypad: sharps above, flats below, "0" in the middle. The sign matters
  * because "2 alterazioni" is both D major and B♭ major.
  * Each row is its own grid so the centred "0" cannot shift the row beneath it.
  */
@@ -46,7 +46,7 @@ export default function AccidentalCountButtons({
 
   return (
     <div className="flex flex-col gap-1.5 w-full">
-      {types.includes('flat') && renderRow('flat')}
+      {types.includes('sharp') && renderRow('sharp')}
       <div className="grid grid-cols-7 gap-1.5">
         <div className="col-start-4">
           <AnswerButton
@@ -58,7 +58,7 @@ export default function AccidentalCountButtons({
           />
         </div>
       </div>
-      {types.includes('sharp') && renderRow('sharp')}
+      {types.includes('flat') && renderRow('flat')}
     </div>
   );
 }

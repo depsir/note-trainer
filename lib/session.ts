@@ -8,6 +8,9 @@ export type FlashType = 'correct' | 'wrong' | null;
 
 export const CORRECT_FEEDBACK_DELAY_MS = 300;
 
+/** Longer pause once a whole sequence lands (a full scale), so the answer can be read back */
+export const SEQUENCE_FEEDBACK_DELAY_MS = 800;
+
 const TICK_MS = 250;
 
 export function formatTime(seconds: number): string {

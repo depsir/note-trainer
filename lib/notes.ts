@@ -1,4 +1,4 @@
-import { Note, Clef } from './types';
+import { AccidentalSign, Clef, Note, NoteNameSystem } from './types';
 
 /** All notes in treble clef: staff (E4–F5) + 1 ledger line above/below */
 const TREBLE_NOTES: Note[] = [
@@ -69,8 +69,28 @@ const ITALIAN: Record<string, string> = {
   B: 'Si',
 };
 
-export function displayNoteName(letter: string, system: 'italian' | 'english'): string {
+export function displayNoteName(letter: string, system: NoteNameSystem): string {
   return system === 'italian' ? ITALIAN[letter] : letter;
 }
 
 export const NOTE_LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'] as const;
+
+export const SHARP = '♯';
+export const FLAT = '♭';
+
+export const ACCIDENTAL_SIGN_SYMBOL: Record<AccidentalSign, string> = {
+  '': '',
+  '#': SHARP,
+  b: FLAT,
+};
+
+/** Note name plus its written accidental, e.g. "Fa♯" (italian) or "F♯" (english). */
+export function displaySpelledNote(letter: string, sign: AccidentalSign, system: NoteNameSystem): string {
+  return displayNoteName(letter, system) + ACCIDENTAL_SIGN_SYMBOL[sign];
+}
+
+/** Semitone of each natural note within an octave, C = 0. */
+export const LETTER_BASE_SEMITONE: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+
+/** How much a written accidental shifts the pitch. */
+export const SIGN_SEMITONE: Record<AccidentalSign, number> = { '': 0, '#': 1, b: -1 };

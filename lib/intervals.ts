@@ -1,5 +1,5 @@
 import { ACCIDENTAL_TYPE_SYMBOL } from './fifths';
-import { getNotesByClef, NOTE_LETTERS, displayNoteName } from './notes';
+import { getNotesByClef, LETTER_BASE_SEMITONE, NOTE_LETTERS, displayNoteName } from './notes';
 import { AccidentalType, Clef, IntervalQuality, NoteNameSystem, TrainingMode } from './types';
 
 /** Interval numbers this app quizzes: 2nd through 8th (unison is skipped — degenerate/rarely drilled). */
@@ -14,7 +14,6 @@ export function isPerfectDegree(degree: number): boolean {
 /** Semitones between the root and a diatonic degree when the interval is major/perfect. */
 const DEGREE_REF_SEMITONES: Record<number, number> = { 2: 2, 3: 4, 4: 5, 5: 7, 6: 9, 7: 11, 8: 12 };
 
-const LETTER_BASE_SEMITONE: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 const LETTER_ORDER: readonly string[] = NOTE_LETTERS;
 
 const ACCIDENTAL_VALUE: Record<AccidentalType, number> = { none: 0, sharp: 1, flat: -1 };

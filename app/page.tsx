@@ -8,6 +8,7 @@ import FifthsTrainer from '@/components/FifthsTrainer';
 import IntervalTrainer from '@/components/IntervalTrainer';
 import ModeSelector from '@/components/ModeSelector';
 import NotesTrainer from '@/components/NotesTrainer';
+import ScalesTrainer from '@/components/ScalesTrainer';
 import { useNoteStats } from '@/lib/storage';
 import { SessionPhase } from '@/lib/session';
 import { TrainingMode } from '@/lib/types';
@@ -45,6 +46,8 @@ export default function HomePage() {
 
         {config.mode === 'fifths' ? (
           <FifthsTrainer config={config} phase={phase} onPhaseChange={setPhase} />
+        ) : config.mode === 'scales' ? (
+          <ScalesTrainer config={config} phase={phase} onPhaseChange={setPhase} />
         ) : config.mode === 'intervals-major' || config.mode === 'intervals-any' ? (
           <IntervalTrainer config={config} phase={phase} onPhaseChange={setPhase} />
         ) : (

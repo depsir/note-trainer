@@ -1,21 +1,12 @@
-import { displayNoteName, NOTE_LETTERS } from './notes';
-import { AccidentalType, Clef, FifthsQuestionKind, MajorKey, NoteNameSystem } from './types';
-
-const SHARP = '♯';
-const FLAT = '♭';
-
-const ACCIDENTAL_SYMBOL: Record<MajorKey['accidental'], string> = {
-  '': '',
-  '#': SHARP,
-  b: FLAT,
-};
+import { displaySpelledNote, FLAT, NOTE_LETTERS, SHARP } from './notes';
+import { AccidentalSign, AccidentalType, Clef, FifthsQuestionKind, MajorKey, NoteNameSystem } from './types';
 
 export const ACCIDENTAL_TYPE_SYMBOL: Record<Exclude<AccidentalType, 'none'>, string> = {
   sharp: SHARP,
   flat: FLAT,
 };
 
-function majorKey(id: string, letter: string, accidental: MajorKey['accidental'], count: number, type: AccidentalType): MajorKey {
+function majorKey(id: string, letter: string, accidental: AccidentalSign, count: number, type: AccidentalType): MajorKey {
   return { id, letter, accidental, count, type };
 }
 
@@ -57,7 +48,7 @@ export function getDefaultEnabledKeys(): string[] {
 
 /** Display label for a key, e.g. "Fa♯" (italian) or "F♯" (english). */
 export function displayKeyName(key: MajorKey, system: NoteNameSystem): string {
-  return displayNoteName(key.letter, system) + ACCIDENTAL_SYMBOL[key.accidental];
+  return displaySpelledNote(key.letter, key.accidental, system);
 }
 
 /** Stable id for an alteration-count answer: "0", "3#", "2b". */
@@ -139,11 +130,11 @@ export function availableAccidentalTypes(keys: MajorKey[]): Exclude<AccidentalTy
 
 /** Keys laid out as a letter-column grid: one row per accidental, C→B across. */
 export interface KeyGridRow {
-  accidental: MajorKey['accidental'];
+  accidental: AccidentalSign;
   cells: (MajorKey | null)[];
 }
 
-export function buildKeyGrid(accidentals: MajorKey['accidental'][]): KeyGridRow[] {
+export function buildKeyGrid(accidentals: AccidentalSign[]): KeyGridRow[] {
   return accidentals.map((accidental) => ({
     accidental,
     cells: NOTE_LETTERS.map(
@@ -155,11 +146,11 @@ export function buildKeyGrid(accidentals: MajorKey['accidental'][]): KeyGridRow[
 /** Rows shown by the tonality keypad, driven by the accidental types in the pool. */
 export function keyGridForPool(keys: MajorKey[]): KeyGridRow[] {
   const types = availableAccidentalTypes(keys);
-  const accidentals: MajorKey['accidental'][] = [];
-  // 'b'/'#' rows only appear when the pool actually contains flat-side / sharp-side keys.
-  if (types.includes('flat')) accidentals.push('b');
-  accidentals.push('');
+  const accidentals: AccidentalSign[] = [];
+  // '#'/'b' rows only appear when the pool actually contains sharp-side / flat-side keys.
   if (types.includes('sharp')) accidentals.push('#');
+  accidentals.push('');
+  if (types.includes('flat')) accidentals.push('b');
   return buildKeyGrid(accidentals);
 }
 
@@ -179,4 +170,7 @@ export function keyIdsForTypes(types: Exclude<AccidentalType, 'none'>[]): string
 }
 
 /** All three accidental rows, for the settings grid where every key must stay reachable. */
-export const CONFIG_KEY_GRID: KeyGridRow[] = buildKeyGrid(['b', '', '#']);
+export const CONFIG_KEY_GRID: KeyGridRow[] = buildKeyGrid(['#', '', 'b']);
+
+/** Keypad rows wherever a note has to be spelled: sharps raise the pitch, so they sit on top. */
+export const SPELLING_ROWS: AccidentalSign[] = ['#', '', 'b'];

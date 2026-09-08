@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ExerciseConfig, FifthsQuestionKind, IntervalPresentation } from '@/lib/types';
+import { ExerciseConfig, FifthsQuestionKind, IntervalPresentation, ScaleType } from '@/lib/types';
 import { ALL_NOTES, noteId } from '@/lib/notes';
 import { X } from 'lucide-react';
 import InteractiveStaff from '@/components/InteractiveStaff';
@@ -15,6 +15,7 @@ import {
   QUESTION_KIND_LABEL,
 } from '@/lib/fifths';
 import { ALL_DEGREES, displayDegreeOrdinal } from '@/lib/intervals';
+import { ALL_SCALE_TYPES, SCALE_TYPE_HINT, SCALE_TYPE_LABEL, scaleCandidates } from '@/lib/scales';
 
 interface ConfigPanelProps {
   config: ExerciseConfig;
@@ -25,6 +26,8 @@ interface ConfigPanelProps {
 
 const MIN_ENABLED_KEYS = 2;
 const MIN_ENABLED_DEGREES = 1;
+const MIN_ENABLED_TONICS = 2;
+const MIN_ENABLED_SCALE_TYPES = 1;
 
 const KEY_PRESETS: { label: string; ids: () => string[] }[] = [
   { label: 'Tutte', ids: getDefaultEnabledKeys },
@@ -127,7 +130,33 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
     setDraft({ ...draft, intervals: { ...draft.intervals, presentation } });
   };
 
+  const toggleScaleType = (type: ScaleType) => {
+    const enabled = new Set(draft.scales.enabledTypes);
+    if (enabled.has(type)) {
+      if (enabled.size <= MIN_ENABLED_SCALE_TYPES) return;
+      enabled.delete(type);
+    } else {
+      enabled.add(type);
+    }
+    setDraft({
+      ...draft,
+      scales: { ...draft.scales, enabledTypes: ALL_SCALE_TYPES.filter((t) => enabled.has(t)) },
+    });
+  };
+
+  const toggleTonic = (id: string) => {
+    const enabled = new Set(draft.scales.enabledTonics);
+    if (enabled.has(id)) {
+      if (enabled.size <= MIN_ENABLED_TONICS) return;
+      enabled.delete(id);
+    } else {
+      enabled.add(id);
+    }
+    setDraft({ ...draft, scales: { ...draft.scales, enabledTonics: [...enabled] } });
+  };
+
   const isFifths = draft.mode === 'fifths';
+  const isScales = draft.mode === 'scales';
   const isIntervals = draft.mode === 'intervals-major' || draft.mode === 'intervals-any';
 
   return (
@@ -140,7 +169,9 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
             <p className="text-xs text-zinc-400">
               {isFifths
                 ? 'Circolo delle quinte'
-                : isIntervals
+                : isScales
+                  ? 'Scale'
+                  : isIntervals
                   ? draft.mode === 'intervals-major' ? 'Intervalli maggiori' : 'Intervalli'
                   : 'Lettura note'}
             </p>
@@ -177,7 +208,8 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
             </div>
           </section>
 
-          {/* Clef */}
+          {/* Clef — scales are spelled by name, nothing is drawn on a staff */}
+          {!isScales && (
           <section>
             <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide mb-2">Chiave</h3>
             <div className="flex gap-3">
@@ -200,6 +232,7 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
               <p className="text-xs text-zinc-400 mt-1">Chiavi in cui viene disegnata l’armatura</p>
             )}
           </section>
+          )}
 
           {/* Note name system */}
           <section>
@@ -365,8 +398,80 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
             </section>
           )}
 
+          {/* Scale types */}
+          {isScales && (
+            <section>
+              <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide mb-2">Tipi di scala</h3>
+              <div className="flex flex-col gap-2">
+                {ALL_SCALE_TYPES.map((type) => {
+                  const enabled = draft.scales.enabledTypes.includes(type);
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => toggleScaleType(type)}
+                      aria-pressed={enabled}
+                      className={[
+                        'w-full px-4 py-2 rounded-xl text-left border-2 transition-colors',
+                        enabled
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300',
+                      ].join(' ')}
+                    >
+                      <span className="block text-sm font-semibold">{SCALE_TYPE_LABEL[type]}</span>
+                      <span className={['block text-xs', enabled ? 'text-indigo-100' : 'text-zinc-400'].join(' ')}>
+                        {SCALE_TYPE_HINT[type]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Scale tonics — same spellings as the circle-of-fifths grid */}
+          {isScales && (
+            <section>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide">Toniche</h3>
+                <button
+                  onClick={() => setDraft({ ...draft, scales: { ...draft.scales, enabledTonics: getDefaultEnabledKeys() } })}
+                  className="text-xs text-indigo-600 font-semibold"
+                >
+                  Tutte
+                </button>
+              </div>
+              <div className="grid grid-cols-7 gap-1.5">
+                {CONFIG_KEY_GRID.flatMap((row) =>
+                  row.cells.map((key, column) =>
+                    key ? (
+                      <button
+                        key={key.id}
+                        onClick={() => toggleTonic(key.id)}
+                        aria-pressed={draft.scales.enabledTonics.includes(key.id)}
+                        className={[
+                          'h-10 rounded-lg text-sm font-semibold border-2 transition-colors',
+                          draft.scales.enabledTonics.includes(key.id)
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'border-zinc-200 dark:border-zinc-700 text-zinc-400',
+                        ].join(' ')}
+                      >
+                        {displayKeyName(key, draft.nameSystem)}
+                      </button>
+                    ) : (
+                      <div key={`${row.accidental}-${column}`} aria-hidden />
+                    )
+                  )
+                )}
+              </div>
+              <p className="text-xs text-zinc-400 mt-1">
+                {scaleCandidates(draft.scales.enabledTonics, draft.scales.enabledTypes).length} scale in esercizio —
+                {' '}restano fuori le combinazioni che richiederebbero doppie alterazioni (es. Sol♯ minore armonica)
+              </p>
+            </section>
+          )}
+
           {/* Note selection — interactive staff */}
-          {!isFifths && !isIntervals && draft.clefs.map((clef) => {
+          {draft.mode === 'notes' && draft.clefs.map((clef) => {
             const clefNotes = ALL_NOTES.filter((n) => n.clef === clef);
             const allSelected = clefNotes.every((n) => draft.enabledNotes.includes(noteId(n)));
             return (

@@ -9,9 +9,11 @@ interface SessionSummaryProps {
   onHome: () => void;
   /** Only note reading keeps per-item stats worth linking to */
   showStatsLink?: boolean;
+  /** Extra line under the percentage, for modes scored by sequence as well as by tap */
+  detail?: string;
 }
 
-export default function SessionSummary({ correct, total, onRestart, onHome, showStatsLink }: SessionSummaryProps) {
+export default function SessionSummary({ correct, total, onRestart, onHome, showStatsLink, detail }: SessionSummaryProps) {
   return (
     <div className="flex flex-col items-center gap-6 w-full text-center">
       <div className="text-6xl">🎉</div>
@@ -23,6 +25,7 @@ export default function SessionSummary({ correct, total, onRestart, onHome, show
             {Math.round((correct / total) * 100)}%
           </p>
         )}
+        {detail && <p className="text-sm font-semibold text-zinc-500 mt-2">{detail}</p>}
       </div>
       <div className="flex flex-col gap-3 w-full max-w-xs">
         <button onClick={onRestart} className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl transition-colors">
