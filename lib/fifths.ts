@@ -128,6 +128,9 @@ export function availableAccidentalTypes(keys: MajorKey[]): Exclude<AccidentalTy
   return types;
 }
 
+/** Keypad rows wherever a note has to be spelled: sharps raise the pitch, so they sit on top. */
+export const SPELLING_ROWS: AccidentalSign[] = ['#', '', 'b'];
+
 /** Keys laid out as a letter-column grid: one row per accidental, C→B across. */
 export interface KeyGridRow {
   accidental: AccidentalSign;
@@ -169,8 +172,5 @@ export function keyIdsForTypes(types: Exclude<AccidentalType, 'none'>[]): string
   return MAJOR_KEYS.filter((key) => key.type === 'none' || types.includes(key.type)).map((key) => key.id);
 }
 
-/** All three accidental rows, for the settings grid where every key must stay reachable. */
-export const CONFIG_KEY_GRID: KeyGridRow[] = buildKeyGrid(['#', '', 'b']);
-
-/** Keypad rows wherever a note has to be spelled: sharps raise the pitch, so they sit on top. */
-export const SPELLING_ROWS: AccidentalSign[] = ['#', '', 'b'];
+/** All three accidental rows, wherever every key must stay reachable: the settings grid, the relative keypad. */
+export const FULL_KEY_GRID: KeyGridRow[] = buildKeyGrid(SPELLING_ROWS);

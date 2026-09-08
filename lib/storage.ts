@@ -5,6 +5,7 @@ import { useHydrated } from './client';
 import { AllNoteStats, ExerciseConfig, TrainingMode } from './types';
 import { ALL_NOTES, getDefaultEnabledNotes, noteId } from './notes';
 import { ALL_QUESTION_KINDS, getDefaultEnabledKeys } from './fifths';
+import { ALL_RELATIVE_QUESTION_KINDS } from './relatives';
 import { getDefaultEnabledDegrees } from './intervals';
 import { ALL_SCALE_TYPES, getDefaultEnabledTonics } from './scales';
 
@@ -22,6 +23,10 @@ const DEFAULT_CONFIG: ExerciseConfig = {
   nameSystem: 'italian',
   fifths: {
     questionKinds: [...ALL_QUESTION_KINDS],
+    enabledKeys: getDefaultEnabledKeys(),
+  },
+  relatives: {
+    questionKinds: [...ALL_RELATIVE_QUESTION_KINDS],
     enabledKeys: getDefaultEnabledKeys(),
   },
   intervals: {

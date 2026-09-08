@@ -1,13 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { ExerciseConfig, FifthsQuestionKind, IntervalPresentation, IntervalQualityScope, ScaleType } from '@/lib/types';
+import {
+  ExerciseConfig,
+  FifthsQuestionKind,
+  IntervalPresentation,
+  IntervalQualityScope,
+  RelativeQuestionKind,
+  ScaleType,
+} from '@/lib/types';
 import { ALL_NOTES, noteId } from '@/lib/notes';
 import { X } from 'lucide-react';
 import InteractiveStaff from '@/components/InteractiveStaff';
 import {
   ALL_QUESTION_KINDS,
-  CONFIG_KEY_GRID,
+  FULL_KEY_GRID,
   displayKeyName,
   getDefaultEnabledKeys,
   keyIdsForTypes,
@@ -21,7 +28,19 @@ import {
   QUALITY_SCOPE_HINT,
   QUALITY_SCOPE_LABEL,
 } from '@/lib/intervals';
-import { ALL_SCALE_TYPES, SCALE_TYPE_HINT, SCALE_TYPE_LABEL, scaleCandidates } from '@/lib/scales';
+import {
+  ALL_RELATIVE_QUESTION_KINDS,
+  getRelativePair,
+  RELATIVE_QUESTION_KIND_HINT,
+  RELATIVE_QUESTION_KIND_LABEL,
+} from '@/lib/relatives';
+import {
+  ALL_SCALE_TYPES,
+  displaySpelledNoteName,
+  SCALE_TYPE_HINT,
+  SCALE_TYPE_LABEL,
+  scaleCandidates,
+} from '@/lib/scales';
 
 interface ConfigPanelProps {
   config: ExerciseConfig;
@@ -121,6 +140,34 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
     setDraft({ ...draft, fifths: { ...draft.fifths, enabledKeys: ids } });
   };
 
+  const toggleRelativeKind = (kind: RelativeQuestionKind) => {
+    const enabled = new Set(draft.relatives.questionKinds);
+    if (enabled.has(kind)) {
+      if (enabled.size <= 1) return; // at least one direction required
+      enabled.delete(kind);
+    } else {
+      enabled.add(kind);
+    }
+    setDraft({
+      ...draft,
+      relatives: {
+        ...draft.relatives,
+        questionKinds: ALL_RELATIVE_QUESTION_KINDS.filter((k) => enabled.has(k)),
+      },
+    });
+  };
+
+  const toggleRelativePair = (id: string) => {
+    const enabled = new Set(draft.relatives.enabledKeys);
+    if (enabled.has(id)) {
+      if (enabled.size <= MIN_ENABLED_KEYS) return;
+      enabled.delete(id);
+    } else {
+      enabled.add(id);
+    }
+    setDraft({ ...draft, relatives: { ...draft.relatives, enabledKeys: [...enabled] } });
+  };
+
   const toggleDegree = (degree: number) => {
     const enabled = new Set(draft.intervals.enabledDegrees);
     if (enabled.has(degree)) {
@@ -168,6 +215,9 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
   const isFifths = draft.mode === 'fifths';
   const isScales = draft.mode === 'scales';
   const isIntervals = draft.mode === 'intervals';
+  const isRelatives = draft.mode === 'relatives';
+  // Scales and relative keys are asked and answered by name — nothing is ever drawn on a staff.
+  const usesStaff = !isScales && !isRelatives;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4">
@@ -179,11 +229,13 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
             <p className="text-xs text-zinc-400">
               {isFifths
                 ? 'Tonalità'
-                : isScales
-                  ? 'Scale'
-                  : isIntervals
-                    ? 'Intervalli'
-                    : 'Lettura note'}
+                : isRelatives
+                  ? 'Relative'
+                  : isScales
+                    ? 'Scale'
+                    : isIntervals
+                      ? 'Intervalli'
+                      : 'Lettura note'}
             </p>
           </div>
           <button onClick={onClose} className="p-1 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800">
@@ -218,8 +270,8 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
             </div>
           </section>
 
-          {/* Clef — scales are spelled by name, nothing is drawn on a staff */}
-          {!isScales && (
+          {/* Clef */}
+          {usesStaff && (
           <section>
             <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide mb-2">Chiave</h3>
             <div className="flex gap-3">
@@ -330,7 +382,7 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
                 </div>
               </div>
               <div className="grid grid-cols-7 gap-1.5">
-                {CONFIG_KEY_GRID.flatMap((row) =>
+                {FULL_KEY_GRID.flatMap((row) =>
                   row.cells.map((key, column) =>
                     key ? (
                       <button
@@ -354,6 +406,83 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
               </div>
               <p className="text-xs text-zinc-400 mt-1">
                 {draft.fifths.enabledKeys.length} tonalità attive — tocca per escluderle
+              </p>
+            </section>
+          )}
+
+          {/* Relative pair directions */}
+          {isRelatives && (
+            <section>
+              <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide mb-2">Da dove partire</h3>
+              <div className="flex flex-col gap-2">
+                {ALL_RELATIVE_QUESTION_KINDS.map((kind) => {
+                  const enabled = draft.relatives.questionKinds.includes(kind);
+                  return (
+                    <button
+                      key={kind}
+                      onClick={() => toggleRelativeKind(kind)}
+                      aria-pressed={enabled}
+                      className={[
+                        'w-full px-4 py-2 rounded-xl text-left border-2 transition-colors',
+                        enabled
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300',
+                      ].join(' ')}
+                    >
+                      <span className="block text-sm font-semibold">{RELATIVE_QUESTION_KIND_LABEL[kind]}</span>
+                      <span className={['block text-xs', enabled ? 'text-indigo-100' : 'text-zinc-400'].join(' ')}>
+                        {RELATIVE_QUESTION_KIND_HINT[kind]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Relative pair pool — the circle-of-fifths grid, each cell showing both names */}
+          {isRelatives && (
+            <section>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide">Coppie in esercizio</h3>
+                <button
+                  onClick={() => setDraft({ ...draft, relatives: { ...draft.relatives, enabledKeys: getDefaultEnabledKeys() } })}
+                  className="text-xs text-indigo-600 font-semibold"
+                >
+                  Tutte
+                </button>
+              </div>
+              <div className="grid grid-cols-7 gap-1.5">
+                {FULL_KEY_GRID.flatMap((row) =>
+                  row.cells.map((key, column) => {
+                    const pair = key && getRelativePair(key.id);
+                    return pair ? (
+                      <button
+                        key={pair.id}
+                        onClick={() => toggleRelativePair(pair.id)}
+                        aria-pressed={draft.relatives.enabledKeys.includes(pair.id)}
+                        className={[
+                          'h-12 rounded-lg border-2 leading-tight transition-colors',
+                          draft.relatives.enabledKeys.includes(pair.id)
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'border-zinc-200 dark:border-zinc-700 text-zinc-400',
+                        ].join(' ')}
+                      >
+                        <span className="block text-xs font-semibold">
+                          {displaySpelledNoteName(pair.major, draft.nameSystem)}
+                        </span>
+                        <span className="block text-[10px] opacity-70">
+                          {displaySpelledNoteName(pair.minor, draft.nameSystem)}
+                        </span>
+                      </button>
+                    ) : (
+                      <div key={`${row.accidental}-${column}`} aria-hidden />
+                    );
+                  })
+                )}
+              </div>
+              <p className="text-xs text-zinc-400 mt-1">
+                {draft.relatives.enabledKeys.length} coppie attive — maggiore sopra, relativa minore sotto
               </p>
             </section>
           )}
@@ -481,7 +610,7 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
                 </button>
               </div>
               <div className="grid grid-cols-7 gap-1.5">
-                {CONFIG_KEY_GRID.flatMap((row) =>
+                {FULL_KEY_GRID.flatMap((row) =>
                   row.cells.map((key, column) =>
                     key ? (
                       <button

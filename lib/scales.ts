@@ -39,23 +39,31 @@ export function displaySpelledNoteName(note: SpelledNote, system: NoteNameSystem
 }
 
 /**
+ * The note `letterSteps` letters and `semitones` above `tonic`, or null when writing it
+ * would need a double accidental — this app spells at most one per note.
+ */
+export function spellFromTonic(tonic: SpelledNote, letterSteps: number, semitones: number): SpelledNote | null {
+  // One letter per step, in order: the letter is fixed and only its accidental is in question.
+  const letterIndex = LETTER_ORDER.indexOf(tonic.letter) + letterSteps;
+  const letter = LETTER_ORDER[letterIndex % 7];
+  const naturalSemitone = LETTER_BASE_SEMITONE[letter] + 12 * Math.floor(letterIndex / 7);
+  const tonicSemitone = LETTER_BASE_SEMITONE[tonic.letter] + SIGN_SEMITONE[tonic.sign];
+  const sign = SIGN_BY_SEMITONE[tonicSemitone + semitones - naturalSemitone];
+  return sign === undefined ? null : { letter, sign };
+}
+
+/**
  * The scale's seven notes, or null when the spelling would need a double accidental
  * (G♯/D♯/A♯ harmonic and melodic minor, D♭/G♭/C♭ minor). Those are left out of the pool
  * rather than pushing the keypad to five rows for three tonalities.
  */
 function buildScale(tonic: SpelledNote, type: ScaleType): SpelledNote[] | null {
-  const tonicLetterIndex = LETTER_ORDER.indexOf(tonic.letter);
-  const tonicSemitone = LETTER_BASE_SEMITONE[tonic.letter] + SIGN_SEMITONE[tonic.sign];
   const notes: SpelledNote[] = [];
 
   for (let degree = 0; degree < SCALE_DEGREES; degree++) {
-    // One letter per degree, in order: a diatonic scale never reuses or skips a letter.
-    const letterIndex = tonicLetterIndex + degree;
-    const letter = LETTER_ORDER[letterIndex % 7];
-    const naturalSemitone = LETTER_BASE_SEMITONE[letter] + 12 * Math.floor(letterIndex / 7);
-    const sign = SIGN_BY_SEMITONE[tonicSemitone + SCALE_PATTERN[type][degree] - naturalSemitone];
-    if (sign === undefined) return null;
-    notes.push({ letter, sign });
+    const note = spellFromTonic(tonic, degree, SCALE_PATTERN[type][degree]);
+    if (!note) return null;
+    notes.push(note);
   }
 
   return notes;

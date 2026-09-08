@@ -2,7 +2,7 @@ export type Clef = 'treble' | 'bass';
 
 export type NoteNameSystem = 'italian' | 'english';
 
-export type TrainingMode = 'notes' | 'fifths' | 'intervals' | 'scales';
+export type TrainingMode = 'notes' | 'fifths' | 'relatives' | 'intervals' | 'scales';
 
 export type AccidentalType = 'none' | 'sharp' | 'flat';
 
@@ -14,6 +14,9 @@ export type ScaleType = 'major' | 'minor-natural' | 'minor-harmonic' | 'minor-me
 
 /** Which way round a circle-of-fifths question is asked */
 export type FifthsQuestionKind = 'signature-to-key' | 'key-to-count';
+
+/** Which end of a relative pair a question starts from */
+export type RelativeQuestionKind = 'major-to-minor' | 'minor-to-major';
 
 /** Interval quality; not every value applies to every degree — see lib/intervals.ts */
 export type IntervalQuality = 'diminished' | 'minor' | 'perfect' | 'major' | 'augmented';
@@ -70,6 +73,13 @@ export interface FifthsConfig {
   enabledKeys: string[];
 }
 
+export interface RelativesConfig {
+  /** Which directions to ask */
+  questionKinds: RelativeQuestionKind[];
+  /** Relative pair ids to include — the ids are those of the major keys */
+  enabledKeys: string[];
+}
+
 export interface IntervalsConfig {
   /** Interval numbers to include (subset of 2-8) */
   enabledDegrees: number[];
@@ -101,6 +111,8 @@ export interface ExerciseConfig {
   nameSystem: NoteNameSystem;
   /** Circle-of-fifths mode settings */
   fifths: FifthsConfig;
+  /** Relative major/minor mode settings */
+  relatives: RelativesConfig;
   /** Interval training mode settings */
   intervals: IntervalsConfig;
   /** Scale training mode settings */

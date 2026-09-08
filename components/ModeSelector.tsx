@@ -10,6 +10,7 @@ interface ModeSelectorProps {
 const MODES: { id: TrainingMode; glyph: string; title: string; subtitle: string }[] = [
   { id: 'notes', glyph: '𝄞', title: 'Lettura note', subtitle: 'Riconosci le note sul pentagramma' },
   { id: 'fifths', glyph: '♯♭', title: 'Tonalità', subtitle: 'Armature e alterazioni' },
+  { id: 'relatives', glyph: 'M/m', title: 'Relative', subtitle: 'Maggiore e minore in coppia' },
   { id: 'intervals', glyph: 'M3', title: 'Intervalli', subtitle: 'La distanza fra due note' },
   { id: 'scales', glyph: '♪↗', title: 'Scale', subtitle: 'Le note in ordine, magg. e min.' },
 ];
