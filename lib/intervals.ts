@@ -1,6 +1,6 @@
 import { ACCIDENTAL_TYPE_SYMBOL } from './fifths';
 import { getNotesByClef, LETTER_BASE_SEMITONE, NOTE_LETTERS, displayNoteName } from './notes';
-import { AccidentalType, Clef, IntervalQuality, NoteNameSystem, TrainingMode } from './types';
+import { AccidentalType, Clef, IntervalQuality, IntervalQualityScope, NoteNameSystem } from './types';
 
 /** Interval numbers this app quizzes: 2nd through 8th (unison is skipped — degenerate/rarely drilled). */
 export const ALL_DEGREES = [2, 3, 4, 5, 6, 7, 8];
@@ -37,7 +37,7 @@ export function qualitiesForDegree(degree: number): IntervalQuality[] {
   return isPerfectDegree(degree) ? ['diminished', 'perfect', 'augmented'] : ['diminished', 'minor', 'major', 'augmented'];
 }
 
-/** The quality asked in "intervals-major" mode: only perfect / major, never minor/diminished/augmented. */
+/** The only quality asked under the "default" scope: perfect / major, never minor/diminished/augmented. */
 export function defaultQuality(degree: number): IntervalQuality {
   return isPerfectDegree(degree) ? 'perfect' : 'major';
 }
@@ -127,8 +127,10 @@ const CANDIDATES_BY_CLEF: Record<Clef, IntervalQuestion[]> = {
   bass: buildCandidates('bass'),
 };
 
-export function qualityFilterForMode(mode: TrainingMode): (degree: number, quality: IntervalQuality) => boolean {
-  return mode === 'intervals-major'
+export function qualityFilterForScope(
+  scope: IntervalQualityScope
+): (degree: number, quality: IntervalQuality) => boolean {
+  return scope === 'default'
     ? (degree, quality) => quality === defaultQuality(degree)
     : () => true;
 }
@@ -141,14 +143,14 @@ export function intervalQuestionId(question: IntervalQuestion): string {
   return `${question.clef}|${question.root.letter}${question.root.accidental}${question.root.octave}|${question.degree}|${question.quality}`;
 }
 
-/** Uniform draw over the candidate pool matching the enabled degrees and mode, avoiding an immediate repeat. */
+/** Uniform draw over the candidate pool matching the enabled degrees and quality scope, avoiding an immediate repeat. */
 export function pickIntervalQuestion(
   clefs: Clef[],
   enabledDegrees: number[],
-  mode: TrainingMode,
+  qualityScope: IntervalQualityScope,
   lastQuestionId?: string
 ): IntervalQuestion {
-  const qualityFilter = qualityFilterForMode(mode);
+  const qualityFilter = qualityFilterForScope(qualityScope);
   const candidateClefs = clefs.length > 0 ? clefs : (['treble'] as Clef[]);
 
   const pool: IntervalQuestion[] = [];
@@ -229,11 +231,11 @@ export function getDefaultEnabledDegrees(): number[] {
   return [...ALL_DEGREES];
 }
 
-/** Which quality "rows" a mode's answer keypad shows — mode1 asks only the default quality. */
+/** Which quality "rows" the answer keypad shows — the "default" scope asks only perfect/major. */
 export type IntervalGridRowKind = 'diminished' | 'minor' | 'default' | 'augmented';
 
-export const INTERVAL_GRID_ROWS_MAJOR: IntervalGridRowKind[] = ['default'];
-export const INTERVAL_GRID_ROWS_ANY: IntervalGridRowKind[] = ['diminished', 'minor', 'default', 'augmented'];
+export const INTERVAL_GRID_ROWS_DEFAULT: IntervalGridRowKind[] = ['default'];
+export const INTERVAL_GRID_ROWS_ALL: IntervalGridRowKind[] = ['diminished', 'minor', 'default', 'augmented'];
 
 function qualityForCell(degree: number, rowKind: IntervalGridRowKind): IntervalQuality | null {
   if (rowKind === 'diminished') return 'diminished';
@@ -263,6 +265,18 @@ export function buildIntervalGrid(rowKinds: IntervalGridRowKind[]): IntervalGrid
   }));
 }
 
-export function gridRowsForMode(mode: TrainingMode): IntervalGridRowKind[] {
-  return mode === 'intervals-major' ? INTERVAL_GRID_ROWS_MAJOR : INTERVAL_GRID_ROWS_ANY;
+export function gridRowsForScope(scope: IntervalQualityScope): IntervalGridRowKind[] {
+  return scope === 'default' ? INTERVAL_GRID_ROWS_DEFAULT : INTERVAL_GRID_ROWS_ALL;
 }
+
+export const ALL_QUALITY_SCOPES: IntervalQualityScope[] = ['default', 'all'];
+
+export const QUALITY_SCOPE_LABEL: Record<IntervalQualityScope, string> = {
+  default: 'Solo giusti e maggiori',
+  all: 'Tutte le qualità',
+};
+
+export const QUALITY_SCOPE_HINT: Record<IntervalQualityScope, string> = {
+  default: 'Una sola risposta per grado',
+  all: 'Anche minori, diminuiti e aumentati',
+};

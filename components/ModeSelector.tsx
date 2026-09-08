@@ -11,8 +11,7 @@ const MODES: { id: TrainingMode; glyph: string; title: string; subtitle: string 
   { id: 'notes', glyph: '𝄞', title: 'Lettura note', subtitle: 'Riconosci le note sul pentagramma' },
   { id: 'fifths', glyph: '♯♭', title: 'Circolo delle quinte', subtitle: 'Armature e alterazioni' },
   { id: 'scales', glyph: '♪↗', title: 'Scale', subtitle: 'Le note in ordine, magg. e min.' },
-  { id: 'intervals-major', glyph: 'M3', title: 'Intervalli maggiori', subtitle: 'Solo giusti e maggiori' },
-  { id: 'intervals-any', glyph: 'm3', title: 'Intervalli', subtitle: 'Qualsiasi, fino a dim/ecc.' },
+  { id: 'intervals', glyph: 'M3', title: 'Intervalli', subtitle: 'Riconosci la distanza fra due note' },
 ];
 
 export default function ModeSelector({ mode, onChange }: ModeSelectorProps) {

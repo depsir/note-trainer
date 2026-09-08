@@ -2,7 +2,7 @@ export type Clef = 'treble' | 'bass';
 
 export type NoteNameSystem = 'italian' | 'english';
 
-export type TrainingMode = 'notes' | 'fifths' | 'intervals-major' | 'intervals-any' | 'scales';
+export type TrainingMode = 'notes' | 'fifths' | 'intervals' | 'scales';
 
 export type AccidentalType = 'none' | 'sharp' | 'flat';
 
@@ -20,6 +20,9 @@ export type IntervalQuality = 'diminished' | 'minor' | 'perfect' | 'major' | 'au
 
 /** How an interval question is presented: two notes on the staff, or their letter names */
 export type IntervalPresentation = 'staff' | 'letters';
+
+/** Which interval qualities get asked: only perfect/major, or every quality */
+export type IntervalQualityScope = 'default' | 'all';
 
 export interface MajorKey {
   /** Stable id, also the VexFlow key spec, e.g. "F#" */
@@ -72,6 +75,8 @@ export interface IntervalsConfig {
   enabledDegrees: number[];
   /** How the question is displayed */
   presentation: IntervalPresentation;
+  /** Whether minor/diminished/augmented qualities are asked too */
+  qualityScope: IntervalQualityScope;
 }
 
 export interface ScalesConfig {

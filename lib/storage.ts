@@ -2,7 +2,7 @@
 
 import { useCallback, useSyncExternalStore } from 'react';
 import { useHydrated } from './client';
-import { AllNoteStats, ExerciseConfig } from './types';
+import { AllNoteStats, ExerciseConfig, TrainingMode } from './types';
 import { ALL_NOTES, getDefaultEnabledNotes, noteId } from './notes';
 import { ALL_QUESTION_KINDS, getDefaultEnabledKeys } from './fifths';
 import { getDefaultEnabledDegrees } from './intervals';
@@ -27,12 +27,31 @@ const DEFAULT_CONFIG: ExerciseConfig = {
   intervals: {
     enabledDegrees: getDefaultEnabledDegrees(),
     presentation: 'staff',
+    qualityScope: 'all',
   },
   scales: {
     enabledTypes: [...ALL_SCALE_TYPES],
     enabledTonics: getDefaultEnabledTonics(),
   },
 };
+
+/** The two interval modes were merged into one whose quality range now lives in the config. */
+type LegacyMode = TrainingMode | 'intervals-major' | 'intervals-any';
+type LegacyConfig = Omit<Partial<ExerciseConfig>, 'mode'> & { mode?: LegacyMode };
+type MergedConfig = Omit<ExerciseConfig, 'mode'> & { mode: LegacyMode };
+
+function migrateConfig(config: MergedConfig): ExerciseConfig {
+  const { mode } = config;
+  if (mode !== 'intervals-major' && mode !== 'intervals-any') return { ...config, mode };
+  return {
+    ...config,
+    mode: 'intervals',
+    intervals: {
+      ...config.intervals,
+      qualityScope: mode === 'intervals-major' ? 'default' : 'all',
+    },
+  };
+}
 
 function loadJSON<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback;
@@ -98,15 +117,15 @@ function getConfigSnapshot() {
   if (raw === cachedConfigRaw) return cachedConfigValue;
 
   cachedConfigRaw = raw;
-  const savedConfig = raw ? loadJSON<Partial<ExerciseConfig>>(CONFIG_KEY, DEFAULT_CONFIG) : DEFAULT_CONFIG;
-  cachedConfigValue = {
+  const savedConfig = raw ? loadJSON<LegacyConfig>(CONFIG_KEY, DEFAULT_CONFIG) : DEFAULT_CONFIG;
+  cachedConfigValue = migrateConfig({
     ...DEFAULT_CONFIG,
     ...savedConfig,
     // Nested sections need their own merge so configs saved before they existed still get defaults.
     fifths: { ...DEFAULT_CONFIG.fifths, ...savedConfig.fifths },
     intervals: { ...DEFAULT_CONFIG.intervals, ...savedConfig.intervals },
     scales: { ...DEFAULT_CONFIG.scales, ...savedConfig.scales },
-  };
+  });
   return cachedConfigValue;
 }
 

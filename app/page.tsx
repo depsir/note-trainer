@@ -48,7 +48,7 @@ export default function HomePage() {
           <FifthsTrainer config={config} phase={phase} onPhaseChange={setPhase} />
         ) : config.mode === 'scales' ? (
           <ScalesTrainer config={config} phase={phase} onPhaseChange={setPhase} />
-        ) : config.mode === 'intervals-major' || config.mode === 'intervals-any' ? (
+        ) : config.mode === 'intervals' ? (
           <IntervalTrainer config={config} phase={phase} onPhaseChange={setPhase} />
         ) : (
           <NotesTrainer config={config} phase={phase} onPhaseChange={setPhase} />

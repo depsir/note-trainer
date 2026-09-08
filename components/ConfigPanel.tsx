@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ExerciseConfig, FifthsQuestionKind, IntervalPresentation, ScaleType } from '@/lib/types';
+import { ExerciseConfig, FifthsQuestionKind, IntervalPresentation, IntervalQualityScope, ScaleType } from '@/lib/types';
 import { ALL_NOTES, noteId } from '@/lib/notes';
 import { X } from 'lucide-react';
 import InteractiveStaff from '@/components/InteractiveStaff';
@@ -14,7 +14,13 @@ import {
   QUESTION_KIND_HINT,
   QUESTION_KIND_LABEL,
 } from '@/lib/fifths';
-import { ALL_DEGREES, displayDegreeOrdinal } from '@/lib/intervals';
+import {
+  ALL_DEGREES,
+  ALL_QUALITY_SCOPES,
+  displayDegreeOrdinal,
+  QUALITY_SCOPE_HINT,
+  QUALITY_SCOPE_LABEL,
+} from '@/lib/intervals';
 import { ALL_SCALE_TYPES, SCALE_TYPE_HINT, SCALE_TYPE_LABEL, scaleCandidates } from '@/lib/scales';
 
 interface ConfigPanelProps {
@@ -130,6 +136,10 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
     setDraft({ ...draft, intervals: { ...draft.intervals, presentation } });
   };
 
+  const setQualityScope = (qualityScope: IntervalQualityScope) => {
+    setDraft({ ...draft, intervals: { ...draft.intervals, qualityScope } });
+  };
+
   const toggleScaleType = (type: ScaleType) => {
     const enabled = new Set(draft.scales.enabledTypes);
     if (enabled.has(type)) {
@@ -157,7 +167,7 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
 
   const isFifths = draft.mode === 'fifths';
   const isScales = draft.mode === 'scales';
-  const isIntervals = draft.mode === 'intervals-major' || draft.mode === 'intervals-any';
+  const isIntervals = draft.mode === 'intervals';
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4">
@@ -172,8 +182,8 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
                 : isScales
                   ? 'Scale'
                   : isIntervals
-                  ? draft.mode === 'intervals-major' ? 'Intervalli maggiori' : 'Intervalli'
-                  : 'Lettura note'}
+                    ? 'Intervalli'
+                    : 'Lettura note'}
             </p>
           </div>
           <button onClick={onClose} className="p-1 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800">
@@ -345,6 +355,36 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
               <p className="text-xs text-zinc-400 mt-1">
                 {draft.fifths.enabledKeys.length} tonalità attive — tocca per escluderle
               </p>
+            </section>
+          )}
+
+          {/* Interval qualities */}
+          {isIntervals && (
+            <section>
+              <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide mb-2">Qualità</h3>
+              <div className="flex flex-col gap-2">
+                {ALL_QUALITY_SCOPES.map((scope) => {
+                  const selected = draft.intervals.qualityScope === scope;
+                  return (
+                    <button
+                      key={scope}
+                      onClick={() => setQualityScope(scope)}
+                      aria-pressed={selected}
+                      className={[
+                        'w-full px-4 py-2 rounded-xl text-left border-2 transition-colors',
+                        selected
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300',
+                      ].join(' ')}
+                    >
+                      <span className="block text-sm font-semibold">{QUALITY_SCOPE_LABEL[scope]}</span>
+                      <span className={['block text-xs', selected ? 'text-indigo-100' : 'text-zinc-400'].join(' ')}>
+                        {QUALITY_SCOPE_HINT[scope]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </section>
           )}
 

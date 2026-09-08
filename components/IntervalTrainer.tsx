@@ -8,10 +8,11 @@ import SessionSummary from '@/components/SessionSummary';
 import {
   buildIntervalGrid,
   displayEndpointName,
-  gridRowsForMode,
+  gridRowsForScope,
   IntervalQuestion,
   intervalQuestionId,
   pickIntervalQuestion,
+  QUALITY_SCOPE_LABEL,
   questionAnswerId,
   rootVexKey,
   targetVexKey,
@@ -39,15 +40,15 @@ export default function IntervalTrainer({ config, phase, onPhaseChange }: Interv
     onPhaseChange('finished');
   }, [stopClock, onPhaseChange]);
 
-  const gridRows = buildIntervalGrid(gridRowsForMode(config.mode));
-  const enabledDegrees = config.intervals.enabledDegrees;
+  const { enabledDegrees, qualityScope } = config.intervals;
+  const gridRows = buildIntervalGrid(gridRowsForScope(qualityScope));
 
   const nextQuestion = useCallback((previousId?: string) => {
     if (enabledDegrees.length === 0) return;
-    setQuestion(pickIntervalQuestion(config.clefs, enabledDegrees, config.mode, previousId));
+    setQuestion(pickIntervalQuestion(config.clefs, enabledDegrees, qualityScope, previousId));
     setFlash(null);
     setWrongAnswerId(null);
-  }, [enabledDegrees, config.clefs, config.mode]);
+  }, [enabledDegrees, config.clefs, qualityScope]);
 
   const startSession = useCallback(() => {
     setSessionCorrect(0);
@@ -78,7 +79,7 @@ export default function IntervalTrainer({ config, phase, onPhaseChange }: Interv
       <div className="flex flex-col items-center gap-6 w-full">
         <div className="text-center space-y-1">
           <p className="text-zinc-500 text-sm">
-            {config.mode === 'intervals-major' ? 'Solo intervalli giusti e maggiori' : 'Tutti gli intervalli, fino a diminuiti/aumentati'}
+            {QUALITY_SCOPE_LABEL[qualityScope]}
           </p>
           <p className="text-zinc-400 text-sm">
             {config.durationSeconds === 0 ? 'Tempo illimitato' : formatTime(config.durationSeconds)}
