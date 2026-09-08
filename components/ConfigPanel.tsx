@@ -178,7 +178,7 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
             <h2 className="text-lg font-bold">Impostazioni</h2>
             <p className="text-xs text-zinc-400">
               {isFifths
-                ? 'Circolo delle quinte'
+                ? 'Tonalità'
                 : isScales
                   ? 'Scale'
                   : isIntervals
@@ -316,7 +316,7 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
           {isFifths && (
             <section>
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide">Tonalità</h3>
+                <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide">Tonalità in esercizio</h3>
                 <div className="flex gap-2">
                   {KEY_PRESETS.map((preset) => (
                     <button
