@@ -12,6 +12,7 @@ const MODES: { id: TrainingMode; glyph: string; title: string; subtitle: string 
   { id: 'fifths', glyph: '♯♭', title: 'Tonalità', subtitle: 'Armature e alterazioni' },
   { id: 'relatives', glyph: 'M/m', title: 'Relative', subtitle: 'Maggiore e minore in coppia' },
   { id: 'intervals', glyph: 'M3', title: 'Intervalli', subtitle: 'La distanza fra due note' },
+  { id: 'interval-build', glyph: '♪→?', title: 'Costruisci', subtitle: 'Dalla nota di partenza a quella di arrivo' },
   { id: 'scales', glyph: '♪↗', title: 'Scale', subtitle: 'Le note in ordine, magg. e min.' },
 ];
 

@@ -2,7 +2,7 @@ export type Clef = 'treble' | 'bass';
 
 export type NoteNameSystem = 'italian' | 'english';
 
-export type TrainingMode = 'notes' | 'fifths' | 'relatives' | 'intervals' | 'scales';
+export type TrainingMode = 'notes' | 'fifths' | 'relatives' | 'intervals' | 'interval-build' | 'scales';
 
 export type AccidentalType = 'none' | 'sharp' | 'flat';
 
@@ -89,6 +89,15 @@ export interface IntervalsConfig {
   qualityScope: IntervalQualityScope;
 }
 
+export interface IntervalBuildConfig {
+  /** Interval numbers to include (subset of BUILD_DEGREES) */
+  enabledDegrees: number[];
+  /** Whether minor/diminished/augmented qualities are asked too */
+  qualityScope: IntervalQualityScope;
+  /** Root note ids to include (subset of ALL_BUILD_ROOT_IDS) */
+  enabledRoots: string[];
+}
+
 export interface ScalesConfig {
   /** Which scale shapes to ask */
   enabledTypes: ScaleType[];
@@ -115,6 +124,8 @@ export interface ExerciseConfig {
   relatives: RelativesConfig;
   /** Interval training mode settings */
   intervals: IntervalsConfig;
+  /** Interval-building mode settings */
+  intervalBuild: IntervalBuildConfig;
   /** Scale training mode settings */
   scales: ScalesConfig;
 }

@@ -28,6 +28,7 @@ import {
   QUALITY_SCOPE_HINT,
   QUALITY_SCOPE_LABEL,
 } from '@/lib/intervals';
+import { BUILD_DEGREES, getDefaultEnabledRoots, intervalBuildCandidates } from '@/lib/intervalBuild';
 import {
   ALL_RELATIVE_QUESTION_KINDS,
   getRelativePair,
@@ -187,6 +188,35 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
     setDraft({ ...draft, intervals: { ...draft.intervals, qualityScope } });
   };
 
+  const toggleBuildDegree = (degree: number) => {
+    const enabled = new Set(draft.intervalBuild.enabledDegrees);
+    if (enabled.has(degree)) {
+      if (enabled.size <= MIN_ENABLED_DEGREES) return;
+      enabled.delete(degree);
+    } else {
+      enabled.add(degree);
+    }
+    setDraft({
+      ...draft,
+      intervalBuild: { ...draft.intervalBuild, enabledDegrees: [...enabled].sort((a, b) => a - b) },
+    });
+  };
+
+  const setBuildQualityScope = (qualityScope: IntervalQualityScope) => {
+    setDraft({ ...draft, intervalBuild: { ...draft.intervalBuild, qualityScope } });
+  };
+
+  const toggleBuildRoot = (id: string) => {
+    const enabled = new Set(draft.intervalBuild.enabledRoots);
+    if (enabled.has(id)) {
+      if (enabled.size <= MIN_ENABLED_KEYS) return;
+      enabled.delete(id);
+    } else {
+      enabled.add(id);
+    }
+    setDraft({ ...draft, intervalBuild: { ...draft.intervalBuild, enabledRoots: [...enabled] } });
+  };
+
   const toggleScaleType = (type: ScaleType) => {
     const enabled = new Set(draft.scales.enabledTypes);
     if (enabled.has(type)) {
@@ -216,8 +246,9 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
   const isScales = draft.mode === 'scales';
   const isIntervals = draft.mode === 'intervals';
   const isRelatives = draft.mode === 'relatives';
-  // Scales and relative keys are asked and answered by name — nothing is ever drawn on a staff.
-  const usesStaff = !isScales && !isRelatives;
+  const isIntervalBuild = draft.mode === 'interval-build';
+  // Scales, relative keys and built intervals are asked and answered by name — nothing is ever drawn on a staff.
+  const usesStaff = !isScales && !isRelatives && !isIntervalBuild;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4">
@@ -235,7 +266,9 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
                     ? 'Scale'
                     : isIntervals
                       ? 'Intervalli'
-                      : 'Lettura note'}
+                      : isIntervalBuild
+                        ? 'Costruisci'
+                        : 'Lettura note'}
             </p>
           </div>
           <button onClick={onClose} className="p-1 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800">
@@ -563,6 +596,109 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
               </div>
               <p className="text-xs text-zinc-400 mt-1">
                 {draft.intervals.enabledDegrees.length} gradi attivi — tocca per escluderli
+              </p>
+            </section>
+          )}
+
+          {/* Interval-build qualities */}
+          {isIntervalBuild && (
+            <section>
+              <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide mb-2">Qualità</h3>
+              <div className="flex flex-col gap-2">
+                {ALL_QUALITY_SCOPES.map((scope) => {
+                  const selected = draft.intervalBuild.qualityScope === scope;
+                  return (
+                    <button
+                      key={scope}
+                      onClick={() => setBuildQualityScope(scope)}
+                      aria-pressed={selected}
+                      className={[
+                        'w-full px-4 py-2 rounded-xl text-left border-2 transition-colors',
+                        selected
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300',
+                      ].join(' ')}
+                    >
+                      <span className="block text-sm font-semibold">{QUALITY_SCOPE_LABEL[scope]}</span>
+                      <span className={['block text-xs', selected ? 'text-indigo-100' : 'text-zinc-400'].join(' ')}>
+                        {QUALITY_SCOPE_HINT[scope]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Interval-build degrees pool — no octave: its target is the root note itself */}
+          {isIntervalBuild && (
+            <section>
+              <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide mb-2">Gradi</h3>
+              <div className="grid grid-cols-6 gap-1.5">
+                {BUILD_DEGREES.map((degree) => (
+                  <button
+                    key={degree}
+                    onClick={() => toggleBuildDegree(degree)}
+                    aria-pressed={draft.intervalBuild.enabledDegrees.includes(degree)}
+                    className={[
+                      'h-10 rounded-lg text-sm font-semibold border-2 transition-colors',
+                      draft.intervalBuild.enabledDegrees.includes(degree)
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'border-zinc-200 dark:border-zinc-700 text-zinc-400',
+                    ].join(' ')}
+                  >
+                    {displayDegreeOrdinal(degree)}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-zinc-400 mt-1">
+                {draft.intervalBuild.enabledDegrees.length} gradi attivi — tocca per escluderli
+              </p>
+            </section>
+          )}
+
+          {/* Interval-build roots — same spellings as the circle-of-fifths grid */}
+          {isIntervalBuild && (
+            <section>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide">Note di partenza</h3>
+                <button
+                  onClick={() => setDraft({ ...draft, intervalBuild: { ...draft.intervalBuild, enabledRoots: getDefaultEnabledRoots() } })}
+                  className="text-xs text-indigo-600 font-semibold"
+                >
+                  Tutte
+                </button>
+              </div>
+              <div className="grid grid-cols-7 gap-1.5">
+                {FULL_KEY_GRID.flatMap((row) =>
+                  row.cells.map((key, column) =>
+                    key ? (
+                      <button
+                        key={key.id}
+                        onClick={() => toggleBuildRoot(key.id)}
+                        aria-pressed={draft.intervalBuild.enabledRoots.includes(key.id)}
+                        className={[
+                          'h-10 rounded-lg text-sm font-semibold border-2 transition-colors',
+                          draft.intervalBuild.enabledRoots.includes(key.id)
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'border-zinc-200 dark:border-zinc-700 text-zinc-400',
+                        ].join(' ')}
+                      >
+                        {displayKeyName(key, draft.nameSystem)}
+                      </button>
+                    ) : (
+                      <div key={`${row.accidental}-${column}`} aria-hidden />
+                    )
+                  )
+                )}
+              </div>
+              <p className="text-xs text-zinc-400 mt-1">
+                {intervalBuildCandidates(
+                  draft.intervalBuild.enabledRoots,
+                  draft.intervalBuild.enabledDegrees,
+                  draft.intervalBuild.qualityScope
+                ).length} intervalli in esercizio —{' '}
+                restano fuori quelli che richiederebbero doppie alterazioni (es. Do♯ + settima aumentata)
               </p>
             </section>
           )}

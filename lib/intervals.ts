@@ -33,6 +33,12 @@ function qualityDiff(degree: number, quality: IntervalQuality): number | null {
   return null;
 }
 
+/** Semitones spanned by a (degree, quality) pair, or null when that quality doesn't exist for the degree. */
+export function intervalSemitones(degree: number, quality: IntervalQuality): number | null {
+  const diff = qualityDiff(degree, quality);
+  return diff === null ? null : DEGREE_REF_SEMITONES[degree] + diff;
+}
+
 export function qualitiesForDegree(degree: number): IntervalQuality[] {
   return isPerfectDegree(degree) ? ['diminished', 'perfect', 'augmented'] : ['diminished', 'minor', 'major', 'augmented'];
 }
