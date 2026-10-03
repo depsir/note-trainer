@@ -12,6 +12,7 @@ import { getInstrument, heardMatches, writtenPitch } from '@/lib/instruments';
 import { HeardNote, useAudioInput } from '@/lib/audioInput';
 import { pickNote, updateWeight, initStats } from '@/lib/adaptive';
 import { CORRECT_FEEDBACK_DELAY_MS, FlashType, formatTime, SessionPhase, useSessionClock } from '@/lib/session';
+import { useWakeLock } from '@/lib/wakeLock';
 import { ExerciseConfig, Note } from '@/lib/types';
 
 interface NotesTrainerProps {
@@ -114,6 +115,10 @@ export default function NotesTrainer({ config, phase, onPhaseChange }: NotesTrai
     paused: flash === 'correct',
     onNote: handleHeard,
   });
+
+  // Answering by playing leaves the screen untouched for the whole session,
+  // which would otherwise let it go dark mid-exercise.
+  useWakeLock(phase === 'playing' && audio.status === 'listening');
 
   if (phase === 'finished') {
     return (

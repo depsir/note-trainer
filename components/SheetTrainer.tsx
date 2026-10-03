@@ -13,6 +13,7 @@ import { HeardNote, useAudioInput } from '@/lib/audioInput';
 import { initStats, updateWeight } from '@/lib/adaptive';
 import { buildSheet, measureOf, Sheet, sheetNoteCount } from '@/lib/sheet';
 import { CORRECT_FEEDBACK_DELAY_MS, FlashType, SEQUENCE_FEEDBACK_DELAY_MS, SessionPhase } from '@/lib/session';
+import { useWakeLock } from '@/lib/wakeLock';
 import { ExerciseConfig } from '@/lib/types';
 
 interface SheetTrainerProps {
@@ -137,6 +138,10 @@ export default function SheetTrainer({ config, phase, onPhaseChange }: SheetTrai
     paused: flash === 'correct',
     onNote: handleHeard,
   });
+
+  // Reading a piece by playing it means minutes without touching the screen,
+  // which would otherwise go dark mid-exercise.
+  useWakeLock(phase === 'playing' && audio.status === 'listening');
 
   const stop = useCallback(() => {
     window.clearTimeout(timerRef.current);
