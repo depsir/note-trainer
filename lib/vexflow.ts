@@ -1,6 +1,6 @@
 'use client';
 
-type VexFlowModule = typeof import('vexflow');
+export type VexFlowModule = typeof import('vexflow');
 
 let vexflowPromise: Promise<VexFlowModule> | null = null;
 

@@ -52,6 +52,17 @@ svg:not(.lucide) {
   max-width: none;
 }
 
+/* The score scrolls itself to the note being read, and the progress bar underneath
+   says how far along the piece is — so the scrollbar earns nothing but a grey band
+   across the bottom of the staff. Dragging and wheeling still work without it. */
+.sheet-score {
+  scrollbar-width: none;
+}
+
+.sheet-score::-webkit-scrollbar {
+  display: none;
+}
+
 /* Note states. VexFlow writes its colours as presentation attributes on the paths it
    draws, and any rule here outranks those — which is what lets a note be recoloured
    without redrawing the score. */

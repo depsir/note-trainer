@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { usePrefersDark, usePrefersReducedMotion } from '@/lib/client';
-import { loadVexFlow } from '@/lib/vexflow';
+import type { Stave, StaveNote } from 'vexflow';
+import { loadVexFlow, VexFlowModule } from '@/lib/vexflow';
+import { getNotesByClef, writtenMidi } from '@/lib/notes';
 import { BEATS_PER_MEASURE } from '@/lib/sheet';
 import { Clef, Note } from '@/lib/types';
 
@@ -20,9 +22,23 @@ interface SheetStaffDisplayProps {
 
 /** Everything below is in VexFlow's own units; the whole drawing is scaled up once at the end. */
 const SCALE = 1.35;
-/** Room above the staff for the bar number and for notes on ledger lines */
-const STAFF_TOP = 40;
-const SYSTEM_HEIGHT = 132;
+/**
+ * Where the staff sits on the canvas it is drawn on, and how tall that canvas is.
+ * Neither is the height you see: both are just working room, and the drawing is
+ * cropped to the music afterwards (see `cropToReach`). VexFlow already leaves four
+ * staff spaces above a stave for what hangs over it, so `STAFF_TOP` is small.
+ */
+const STAFF_TOP = 10;
+const CANVAS_HEIGHT = 160;
+/** Breathing room left around the music once the drawing is cropped to it */
+const VERTICAL_PADDING = 6;
+/** How far the bar number reaches above the baseline VexFlow writes it on */
+const MEASURE_NUMBER_ASCENT = 10;
+/**
+ * Height held open until the first drawing lands, so the page does not jump.
+ * A shade over what either clef asks for, so the card only ever settles inwards.
+ */
+const PLACEHOLDER_HEIGHT = 155;
 const NOTE_WIDTH = 46;
 const MEASURE_WIDTH = NOTE_WIDTH * BEATS_PER_MEASURE;
 /** Extra room the first bar needs for the clef and the time signature */
@@ -38,6 +54,91 @@ const READING_POSITION = 0.34;
 const NOTE_STATE_CLASSES = ['is-pending', 'is-current', 'is-wrong', 'is-done', 'is-fumbled'];
 
 /**
+ * How far up and down the writing reaches, in VexFlow units.
+ *
+ * Asking the SVG is no good here: VexFlow 5 draws its glyphs as text in a music font,
+ * and `getBBox` on a `<text>` reports the font's whole line box rather than the ink in
+ * it — half again as tall as the staff, for a notehead. So the span is collected from
+ * the objects instead, each of which knows where it ends up.
+ */
+class Reach {
+  top = Infinity;
+  bottom = -Infinity;
+
+  add(top: number, bottom: number) {
+    this.top = Math.min(this.top, top);
+    this.bottom = Math.max(this.bottom, bottom);
+  }
+
+  /** A note reaches from the top of its stem or head to the bottom of whichever is lower. */
+  addNote(note: StaveNote) {
+    const head = note.getNoteHeadBounds();
+    const stem = note.getStemExtents();
+    this.add(Math.min(head.yTop, stem.topY, stem.baseY), Math.max(head.yBottom, stem.topY, stem.baseY));
+  }
+}
+
+/**
+ * How much room this clef needs, whatever the piece turns out to be.
+ *
+ * Measuring the notes a piece happens to have drawn would let the box breathe between
+ * pieces — one that stayed low would sit in a shorter card than the next. So what gets
+ * measured is the staff itself plus the highest and the lowest note the clef can ever
+ * ask for, formatted onto a stave of their own and never drawn. Every piece in a clef
+ * then gets the same box, and the box never moves while the piece is being read.
+ */
+function measureStaff(stave: Stave, clef: Clef, vexflow: VexFlowModule): Reach {
+  const { Formatter, StaveNote, Voice } = vexflow;
+  const reach = new Reach();
+
+  reach.add(stave.getTopLineTopY(), stave.getBottomLineBottomY());
+  // The bar number is written above the lines, and the clef hangs past them both ways.
+  reach.add(stave.getYForTopText(0) - MEASURE_NUMBER_ASCENT, stave.getBottomLineBottomY());
+  for (const modifier of stave.getModifiers()) {
+    const box = modifier.getBoundingBox();
+    // Barlines and the time signature stay within the lines and report nothing.
+    if (box.getH() > 0) reach.add(box.getY(), box.getY() + box.getH());
+  }
+
+  const range = getNotesByClef(clef);
+  const pitches = range.map(writtenMidi);
+  const extremes = [range[pitches.indexOf(Math.min(...pitches))], range[pitches.indexOf(Math.max(...pitches))]];
+  const gauge = extremes.map((note) => new StaveNote({ keys: [note.vexKey], duration: 'q', clef }));
+
+  // Being put on the stave is what gives a note its height, and the height is all these
+  // two are here for; formatting then fills in the stem the height is measured against.
+  gauge.forEach((note) => note.setStave(stave));
+  const voice = new Voice({ numBeats: gauge.length, beatValue: 4 }).setStrict(false);
+  voice.setContext(stave.checkContext()).setStave(stave).addTickables(gauge);
+  new Formatter().joinVoices([voice]).formatToStave([voice], stave);
+  gauge.forEach((note) => reach.addNote(note));
+
+  return reach;
+}
+
+/**
+ * Crops the drawing to the music, leaving an even margin above and below it.
+ *
+ * What a piece needs above and below the staff depends on what it drew — how high and
+ * low its notes sit, how far the clef hangs past the lines — so the canvas is drawn
+ * deliberately too tall and trimmed to fit. VexFlow scales by view box and the notes
+ * keep their own coordinates, so sliding the view box onto the music and shrinking the
+ * element to match costs nothing: neither the drawing nor the sideways scroll moves.
+ *
+ * Returns the cropped height in CSS pixels.
+ */
+function cropToReach(svg: SVGSVGElement, reach: Reach, width: number): number {
+  const top = reach.top - VERTICAL_PADDING;
+  const height = reach.bottom - reach.top + VERTICAL_PADDING * 2;
+  const pixels = Math.round(height * SCALE);
+
+  svg.setAttribute('viewBox', `0 ${top} ${width} ${height}`);
+  svg.setAttribute('height', String(pixels));
+  svg.style.height = `${pixels}px`;
+  return pixels;
+}
+
+/**
  * The piece as one long staff that scrolls itself as it is read.
  *
  * It is drawn once per piece and then only recoloured: a redraw would wipe the SVG and
@@ -50,6 +151,7 @@ export default function SheetStaffDisplay({ notes, clef, currentIndex, fumbled, 
   const staffRef = useRef<HTMLDivElement>(null);
   const noteElementsRef = useRef<SVGElement[]>([]);
   const [drawnAt, setDrawnAt] = useState(0);
+  const [height, setHeight] = useState(PLACEHOLDER_HEIGHT);
   const isDark = usePrefersDark();
   const reducedMotion = usePrefersReducedMotion();
 
@@ -60,7 +162,8 @@ export default function SheetStaffDisplay({ notes, clef, currentIndex, fumbled, 
     let cancelled = false;
     noteElementsRef.current = [];
 
-    void loadVexFlow().then(({ Barline, Formatter, Renderer, Stave, StaveNote, Voice }) => {
+    void loadVexFlow().then((vexflow) => {
+      const { Barline, Formatter, Renderer, Stave, StaveNote, Voice } = vexflow;
       if (cancelled || !staffRef.current) return;
 
       const container = staffRef.current;
@@ -70,7 +173,7 @@ export default function SheetStaffDisplay({ notes, clef, currentIndex, fumbled, 
       const totalWidth = EDGE_PADDING * 2 + FIRST_MEASURE_EXTRA + MEASURE_WIDTH * measures;
 
       const renderer = new Renderer(container, Renderer.Backends.SVG);
-      renderer.resize(Math.round(totalWidth * SCALE), Math.round(SYSTEM_HEIGHT * SCALE));
+      renderer.resize(Math.round(totalWidth * SCALE), Math.round(CANVAS_HEIGHT * SCALE));
 
       const context = renderer.getContext();
       context.scale(SCALE, SCALE);
@@ -81,6 +184,7 @@ export default function SheetStaffDisplay({ notes, clef, currentIndex, fumbled, 
       context.setLineWidth(1.2);
 
       const drawn: SVGElement[] = [];
+      let extent: Reach | null = null;
       let x = EDGE_PADDING;
 
       for (let measure = 0; measure < measures; measure++) {
@@ -107,6 +211,10 @@ export default function SheetStaffDisplay({ notes, clef, currentIndex, fumbled, 
         new Formatter().joinVoices([voice]).formatToStave([voice], stave);
         voice.draw(context, stave);
 
+        // Every bar sits at the same height, so the first settles the box for all of them.
+        // It has to be measured once drawn: until then the clef does not know where it is.
+        if (isFirst) extent = measureStaff(stave, clef, vexflow);
+
         staveNotes.forEach((staveNote) => {
           const group = staveNote.getSVGElement();
           if (!group) return;
@@ -118,6 +226,8 @@ export default function SheetStaffDisplay({ notes, clef, currentIndex, fumbled, 
       }
 
       noteElementsRef.current = drawn;
+      const svg = container.querySelector('svg');
+      if (svg && extent) setHeight(cropToReach(svg, extent, totalWidth));
       // Colouring and scrolling both hang off the elements this pass produced.
       setDrawnAt((count) => count + 1);
     });
@@ -165,7 +275,7 @@ export default function SheetStaffDisplay({ notes, clef, currentIndex, fumbled, 
       className="sheet-score w-full overflow-x-auto overflow-y-hidden overscroll-x-contain"
       aria-hidden
     >
-      <div ref={staffRef} style={{ minHeight: Math.round(SYSTEM_HEIGHT * SCALE) }} />
+      <div ref={staffRef} style={{ height }} />
     </div>
   );
 }
