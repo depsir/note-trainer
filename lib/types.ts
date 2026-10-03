@@ -12,6 +12,9 @@ export type AccidentalSign = '' | '#' | 'b';
 /** The four scale shapes this app drills */
 export type ScaleType = 'major' | 'minor-natural' | 'minor-harmonic' | 'minor-melodic';
 
+/** Instruments the microphone input knows how to listen to — see lib/instruments.ts */
+export type InstrumentId = 'guitar' | 'clarinet-bb' | 'concert';
+
 /** Which way round a circle-of-fifths question is asked */
 export type FifthsQuestionKind = 'signature-to-key' | 'key-to-count';
 
@@ -101,6 +104,8 @@ export interface IntervalBuildConfig {
 export interface AudioInputConfig {
   /** Answer by playing the note, alongside the buttons */
   enabled: boolean;
+  /** Which instrument is being played; decides how written notes are transposed */
+  instrument: InstrumentId;
   /** Chosen input device; empty means the system default */
   deviceId: string;
   /** Concert pitch the heard notes are named against */

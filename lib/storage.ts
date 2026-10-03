@@ -52,6 +52,9 @@ const DEFAULT_CONFIG: ExerciseConfig = {
   },
   audio: {
     enabled: false,
+    // The guitar is what the input was built for; a config saved before this
+    // setting existed came from one, so it is also the right fallback.
+    instrument: 'guitar',
     deviceId: '',
     a4: DEFAULT_A4,
     strictOctave: false,

@@ -3,24 +3,37 @@
 import { Mic, MicOff } from 'lucide-react';
 import { displaySpelledNote } from '@/lib/notes';
 import { AudioInput } from '@/lib/audioInput';
+import { isTransposing, writtenPitch } from '@/lib/instruments';
 import { DetectedNote } from '@/lib/pitch';
-import { NoteNameSystem } from '@/lib/types';
+import { Clef, InstrumentId, NoteNameSystem } from '@/lib/types';
 
-export interface GuitarAnswer {
+export interface PlayedAnswer {
   note: DetectedNote;
   correct: boolean;
 }
 
-interface GuitarInputProps extends Pick<AudioInput, 'status' | 'error' | 'level' | 'heard'> {
+interface InstrumentInputProps extends Pick<AudioInput, 'status' | 'error' | 'level' | 'heard'> {
   nameSystem: NoteNameSystem;
+  instrument: InstrumentId;
+  /** Clef being read, which is what the heard pitch is named back in */
+  clef: Clef;
   /** The last note taken as an answer; stays put until the next question */
-  answer?: GuitarAnswer | null;
+  answer?: PlayedAnswer | null;
 }
 
 /** Within this much of the tempered pitch the note reads as in tune. */
 const IN_TUNE_CENTS = 15;
 
-export default function GuitarInput({ status, error, level, heard, nameSystem, answer }: GuitarInputProps) {
+export default function InstrumentInput({
+  status,
+  error,
+  level,
+  heard,
+  nameSystem,
+  instrument,
+  clef,
+  answer,
+}: InstrumentInputProps) {
   if (status === 'off') return null;
 
   if (status === 'denied' || status === 'unsupported' || status === 'error') {
@@ -34,6 +47,12 @@ export default function GuitarInput({ status, error, level, heard, nameSystem, a
 
   const inTune = heard !== null && Math.abs(heard.cents) <= IN_TUNE_CENTS;
   const wrong = answer !== null && answer !== undefined && !answer.correct;
+  // A transposing instrument reads a different note from the one it sounds, and
+  // the staff is what the player is looking at: name the pitch back in written
+  // terms, and keep the sounding one as the small print.
+  const transposes = isTransposing(instrument, clef);
+  const written = heard && writtenPitch(heard.midi, instrument, clef);
+  const answerWritten = answer && writtenPitch(answer.note.midi, instrument, clef);
 
   return (
     <div
@@ -54,12 +73,13 @@ export default function GuitarInput({ status, error, level, heard, nameSystem, a
           'text-xl font-black leading-none',
           heard ? (wrong ? 'text-red-700 dark:text-red-300' : 'text-zinc-800 dark:text-zinc-100') : 'text-zinc-300 dark:text-zinc-700',
         ].join(' ')}>
-          {heard ? displaySpelledNote(heard.letter, heard.accidental, nameSystem) : '—'}
+          {written ? displaySpelledNote(written.letter, written.accidental, nameSystem) : '—'}
         </span>
 
-        {heard && (
+        {written && heard && (
           <span className={['text-[11px] tabular-nums', wrong ? 'text-red-400 dark:text-red-500' : 'text-zinc-400'].join(' ')}>
-            {heard.octave}
+            {written.octave}
+            {transposes && ` · suona ${displaySpelledNote(heard.letter, heard.accidental, nameSystem)}${heard.octave}`}
           </span>
         )}
 
@@ -75,7 +95,7 @@ export default function GuitarInput({ status, error, level, heard, nameSystem, a
             ].join(' ')}
           >
             {answer.correct ? '✓' : '✗'}
-            {displaySpelledNote(answer.note.letter, answer.note.accidental, nameSystem)}
+            {answerWritten && displaySpelledNote(answerWritten.letter, answerWritten.accidental, nameSystem)}
           </span>
         ) : (
           heard && (

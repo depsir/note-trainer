@@ -148,8 +148,8 @@ const SEMITONE_SPELLING: { letter: string; accidental: AccidentalSign }[] = [
   { letter: 'B', accidental: '' },
 ];
 
-export interface DetectedNote {
-  /** Nearest tempered pitch, as a MIDI number (60 = middle C) */
+export interface SpelledPitch {
+  /** A tempered pitch, as a MIDI number (60 = middle C) */
   midi: number;
   /** Letter name A–G of that pitch */
   letter: string;
@@ -157,20 +157,27 @@ export interface DetectedNote {
   accidental: AccidentalSign;
   /** Scientific octave: middle C is C4 */
   octave: number;
+}
+
+export interface DetectedNote extends SpelledPitch {
   /** How far the heard pitch sits from the tempered one, −50…+50 */
   cents: number;
 }
 
-/** Snap a frequency to the nearest tempered pitch and name it. */
-export function frequencyToNote(frequency: number, a4 = DEFAULT_A4): DetectedNote {
-  const exactMidi = frequencyToMidi(frequency, a4);
-  const midi = Math.round(exactMidi);
+/** Name a tempered pitch given as a MIDI number. */
+export function midiToSpelled(midi: number): SpelledPitch {
   const semitone = ((midi % 12) + 12) % 12;
   return {
     midi,
     letter: SEMITONE_SPELLING[semitone].letter,
     accidental: SEMITONE_SPELLING[semitone].accidental,
     octave: Math.floor(midi / 12) - 1,
-    cents: Math.round((exactMidi - midi) * 100),
   };
+}
+
+/** Snap a frequency to the nearest tempered pitch and name it. */
+export function frequencyToNote(frequency: number, a4 = DEFAULT_A4): DetectedNote {
+  const exactMidi = frequencyToMidi(frequency, a4);
+  const midi = Math.round(exactMidi);
+  return { ...midiToSpelled(midi), cents: Math.round((exactMidi - midi) * 100) };
 }

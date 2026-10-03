@@ -1,13 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import GuitarInput, { GuitarAnswer } from '@/components/GuitarInput';
+import InstrumentInput, { PlayedAnswer } from '@/components/InstrumentInput';
 import NoteButtons from '@/components/NoteButtons';
 import SessionHud from '@/components/SessionHud';
 import SessionSummary from '@/components/SessionSummary';
 import SheetStaffDisplay from '@/components/SheetStaffDisplay';
 import { useNoteStats } from '@/lib/storage';
-import { ALL_NOTES, guitarSoundingMidi, noteId } from '@/lib/notes';
+import { ALL_NOTES, noteId } from '@/lib/notes';
+import { getInstrument, heardMatches, writtenPitch } from '@/lib/instruments';
 import { HeardNote, useAudioInput } from '@/lib/audioInput';
 import { initStats, updateWeight } from '@/lib/adaptive';
 import { buildSheet, measureOf, Sheet, sheetNoteCount } from '@/lib/sheet';
@@ -35,7 +36,7 @@ export default function SheetTrainer({ config, phase, onPhaseChange }: SheetTrai
   const [totalAttempts, setTotalAttempts] = useState(0);
   const [flash, setFlash] = useState<FlashType>(null);
   const [lastAnswer, setLastAnswer] = useState<{ letter: string; correct: boolean } | null>(null);
-  const [lastHeard, setLastHeard] = useState<GuitarAnswer | null>(null);
+  const [lastHeard, setLastHeard] = useState<PlayedAnswer | null>(null);
 
   const noteShownAtRef = useRef(0);
   const timerRef = useRef<number | undefined>(undefined);
@@ -43,6 +44,8 @@ export default function SheetTrainer({ config, phase, onPhaseChange }: SheetTrai
 
   useEffect(() => { statsRef.current = stats; }, [stats]);
   useEffect(() => () => window.clearTimeout(timerRef.current), []);
+
+  const instrument = getInstrument(config.audio.instrument);
 
   const candidates = useMemo(
     () => ALL_NOTES.filter((n) => config.enabledNotes.includes(noteId(n))),
@@ -114,19 +117,23 @@ export default function SheetTrainer({ config, phase, onPhaseChange }: SheetTrai
   const handleHeard = useCallback(
     (note: HeardNote) => {
       if (!currentNote) return;
-      const correct = config.audio.strictOctave
-        ? note.midi === guitarSoundingMidi(currentNote)
-        : note.accidental === '' && note.letter === currentNote.letter;
+      const correct = heardMatches(note.midi, currentNote, instrument.id, config.audio.strictOctave);
+      // The buttons answer in written terms, so the heard pitch is named back
+      // the way the player reads it. An accidental has no button of its own,
+      // and lighting up its letter would read as the right note being
+      // rejected — the panel says what was heard instead.
+      const written = writtenPitch(note.midi, instrument.id, currentNote.clef);
       setLastHeard({ note, correct });
-      registerAnswer(correct, note.accidental === '' ? note.letter : null);
+      registerAnswer(correct, written.accidental === '' ? written.letter : null);
     },
-    [currentNote, config.audio.strictOctave, registerAnswer]
+    [currentNote, instrument, config.audio.strictOctave, registerAnswer]
   );
 
   const audio = useAudioInput({
     enabled: config.audio.enabled && phase === 'playing',
     deviceId: config.audio.deviceId,
     a4: config.audio.a4,
+    instrument: config.audio.instrument,
     paused: flash === 'correct',
     onNote: handleHeard,
   });
@@ -166,7 +173,7 @@ export default function SheetTrainer({ config, phase, onPhaseChange }: SheetTrai
             {config.clefs.map((c) => (c === 'treble' ? 'Chiave di Violino' : 'Chiave di Basso')).join(' · ')}
             {' · '}{config.useAdaptive ? 'Adattivo' : 'Casuale'}
             {' · '}{config.nameSystem === 'italian' ? 'Do Re Mi' : 'C D E'}
-            {config.audio.enabled ? ' · 🎸 Chitarra' : ''}
+            {config.audio.enabled ? ` · ${instrument.icon} ${instrument.label}` : ''}
           </p>
           <p className="text-zinc-400 text-xs pt-1">
             Nessun timer: leggi le note una dopo l’altra, lo spartito scorre da solo.
@@ -219,12 +226,14 @@ export default function SheetTrainer({ config, phase, onPhaseChange }: SheetTrai
         </span>
       </div>
 
-      <GuitarInput
+      <InstrumentInput
         status={audio.status}
         error={audio.error}
         level={audio.level}
         heard={audio.heard}
         nameSystem={config.nameSystem}
+        instrument={config.audio.instrument}
+        clef={sheet.clef}
         answer={lastHeard}
       />
 

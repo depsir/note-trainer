@@ -1,13 +1,18 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { getInstrument } from './instruments.ts';
 import { detectPitch, frequencyToNote, rms, type DetectedNote } from './pitch.ts';
+import type { InstrumentId } from './types.ts';
 
 /**
- * Live note input from a guitar plugged into an audio interface, or from the
- * microphone. The detector itself lives in ./pitch — this only owns the audio
- * graph, the noise gate, and the decision of when a played note counts as an
- * answer.
+ * Live note input from an instrument plugged into an audio interface, or from
+ * the microphone. The detector itself lives in ./pitch — this only owns the
+ * audio graph, the noise gate, and the decision of when a played note counts as
+ * an answer.
+ *
+ * What counts as a new note depends on the instrument: see the onset profiles
+ * in ./instruments.
  */
 
 /** Window handed to the detector: 2048 frames is ~46 ms, four periods of a low E. */
@@ -20,16 +25,12 @@ const NOISE_GATE = 0.01;
 const MIN_CLARITY = 0.9;
 /** Frames that must agree on the same pitch before it counts as played. */
 const STABLE_FRAMES = 3;
-/** A fresh pluck has to be this much louder than the tail of the previous one. */
-const ATTACK_RATIO = 1.8;
-/** How fast the envelope follower falls while a string rings out. */
-const ENVELOPE_DECAY = 0.97;
 /** Nothing is accepted for this long after a note lands. */
 const LOCKOUT_MS = 350;
 /**
- * The detector's window is ~46 ms long, so right after a pluck it still holds
- * the pick noise. Nothing is accepted until the window has filled with the note
- * itself, or a transient can read as a stable wrong answer.
+ * The detector's window is ~46 ms long, so right after an attack it still holds
+ * the pick or tongue noise. Nothing is accepted until the window has filled
+ * with the note itself, or a transient can read as a stable wrong answer.
  */
 const ATTACK_SETTLE_MS = 60;
 /** The meter and the readout refresh at this interval, not once per frame. */
@@ -52,6 +53,8 @@ export interface AudioInputOptions {
   enabled: boolean;
   deviceId: string;
   a4: number;
+  /** Decides how a new note is told apart from the one still sounding */
+  instrument: InstrumentId;
   /** Keep listening and metering, but accept nothing */
   paused?: boolean;
   /** Fired once per played note, after its pitch settles */
@@ -94,7 +97,7 @@ async function listAudioInputs(): Promise<MediaDeviceInfo[]> {
   }
 }
 
-export function useAudioInput({ enabled, deviceId, a4, paused, onNote }: AudioInputOptions): AudioInput {
+export function useAudioInput({ enabled, deviceId, a4, instrument, paused, onNote }: AudioInputOptions): AudioInput {
   const [status, setStatus] = useState<AudioInputStatus>('off');
   const [error, setError] = useState<string | null>(null);
   const [level, setLevel] = useState(0);
@@ -106,13 +109,16 @@ export function useAudioInput({ enabled, deviceId, a4, paused, onNote }: AudioIn
   const candidateMidiRef = useRef<number | null>(null);
   const candidateFramesRef = useRef(0);
   const acceptedAtRef = useRef(0);
+  const acceptedMidiRef = useRef<number | null>(null);
 
   // Kept in refs so that changing them never tears the audio graph down.
   const onNoteRef = useRef(onNote);
   const pausedRef = useRef(paused);
   const a4Ref = useRef(a4);
+  const onsetRef = useRef(getInstrument(instrument).onset);
   useEffect(() => { onNoteRef.current = onNote; }, [onNote]);
   useEffect(() => { a4Ref.current = a4; }, [a4]);
+  useEffect(() => { onsetRef.current = getInstrument(instrument).onset; }, [instrument]);
   useEffect(() => {
     pausedRef.current = paused;
     // Coming back from a pause must not let a still-ringing string answer:
@@ -132,6 +138,7 @@ export function useAudioInput({ enabled, deviceId, a4, paused, onNote }: AudioIn
     envelopeRef.current = 0;
     candidateMidiRef.current = null;
     candidateFramesRef.current = 0;
+    acceptedMidiRef.current = null;
 
     const start = async () => {
       if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
@@ -201,16 +208,18 @@ export function useAudioInput({ enabled, deviceId, a4, paused, onNote }: AudioIn
         analyser.getFloatTimeDomainData(samples);
 
         const now = Date.now();
+        const onset = onsetRef.current;
         const currentLevel = rms(samples);
         const isSilent = currentLevel < NOISE_GATE;
         // Compared against the envelope *before* this frame, so that the rise
-        // of a new pluck is still visible.
-        const isAttack = !isSilent && currentLevel > envelopeRef.current * ATTACK_RATIO;
-        envelopeRef.current = Math.max(currentLevel, envelopeRef.current * ENVELOPE_DECAY);
+        // of a new note is still visible.
+        const isAttack = !isSilent && currentLevel > envelopeRef.current * onset.attackRatio;
+        envelopeRef.current = Math.max(currentLevel, envelopeRef.current * onset.envelopeDecay);
 
         if (isAttack) attackAt = now;
 
-        if (!armedRef.current && !pausedRef.current && (isSilent || isAttack) && now - acceptedAtRef.current > LOCKOUT_MS) {
+        const canArm = !pausedRef.current && now - acceptedAtRef.current > LOCKOUT_MS;
+        if (!armedRef.current && canArm && (isSilent || isAttack)) {
           armedRef.current = true;
         }
 
@@ -226,10 +235,20 @@ export function useAudioInput({ enabled, deviceId, a4, paused, onNote }: AudioIn
             candidateFramesRef.current = 1;
           }
 
+          const stable = candidateFramesRef.current >= STABLE_FRAMES;
+          // Slurring to a different note is the only sign a sustaining
+          // instrument gives that it has moved on. Repeating the *same* note
+          // without tonguing it is indistinguishable from holding it, so that
+          // one still needs an attack.
+          if (!armedRef.current && canArm && onset.rearmOnPitchChange && stable && note.midi !== acceptedMidiRef.current) {
+            armedRef.current = true;
+          }
+
           const settled = now - attackAt >= ATTACK_SETTLE_MS;
-          if (armedRef.current && !pausedRef.current && settled && candidateFramesRef.current >= STABLE_FRAMES) {
+          if (armedRef.current && !pausedRef.current && settled && stable) {
             armedRef.current = false;
             acceptedAtRef.current = now;
+            acceptedMidiRef.current = note.midi;
             candidateMidiRef.current = null;
             candidateFramesRef.current = 0;
             onNoteRef.current?.({ ...note, frequency: clear.frequency, clarity: clear.clarity, at: now });
