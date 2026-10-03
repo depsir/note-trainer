@@ -1,6 +1,6 @@
-import { ACCIDENTAL_TYPE_SYMBOL } from './fifths';
-import { getNotesByClef, LETTER_BASE_SEMITONE, NOTE_LETTERS, displayNoteName } from './notes';
-import { AccidentalType, Clef, IntervalQuality, IntervalQualityScope, NoteNameSystem } from './types';
+import { ACCIDENTAL_TYPE_SYMBOL } from './fifths.ts';
+import { getNotesByClef, LETTER_BASE_SEMITONE, NOTE_LETTERS, displayNoteName } from './notes.ts';
+import type { AccidentalType, Clef, IntervalQuality, IntervalQualityScope, NoteNameSystem } from './types.ts';
 
 /** Interval numbers this app quizzes: 2nd through 8th (unison is skipped — degenerate/rarely drilled). */
 export const ALL_DEGREES = [2, 3, 4, 5, 6, 7, 8];

@@ -1,5 +1,5 @@
-import { Note, AllNoteStats, NoteStats } from './types';
-import { noteId } from './notes';
+import type { Note, AllNoteStats, NoteStats } from './types.ts';
+import { noteId } from './notes.ts';
 
 const DEFAULT_WEIGHT = 1.0;
 /** Weight multiplier for a fast correct answer (≤ 0 ms) */

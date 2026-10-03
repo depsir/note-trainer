@@ -1,5 +1,5 @@
-import { displaySpelledNote, FLAT, NOTE_LETTERS, SHARP } from './notes';
-import { AccidentalSign, AccidentalType, Clef, FifthsQuestionKind, MajorKey, NoteNameSystem } from './types';
+import { displaySpelledNote, FLAT, NOTE_LETTERS, SHARP } from './notes.ts';
+import type { AccidentalSign, AccidentalType, Clef, FifthsQuestionKind, MajorKey, NoteNameSystem } from './types.ts';
 
 export const ACCIDENTAL_TYPE_SYMBOL: Record<Exclude<AccidentalType, 'none'>, string> = {
   sharp: SHARP,

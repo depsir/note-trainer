@@ -1,6 +1,6 @@
-import { MAJOR_KEYS } from './fifths';
-import { displaySpelledNoteName, SpelledNote, spelledNoteId, spellFromTonic } from './scales';
-import { NoteNameSystem, RelativeQuestionKind } from './types';
+import { MAJOR_KEYS } from './fifths.ts';
+import { displaySpelledNoteName, spelledNoteId, spellFromTonic, type SpelledNote } from './scales.ts';
+import type { NoteNameSystem, RelativeQuestionKind } from './types.ts';
 
 /** A relative minor is the 6th degree of its major: five letters and nine semitones up. */
 const RELATIVE_MINOR_LETTER_STEPS = 5;

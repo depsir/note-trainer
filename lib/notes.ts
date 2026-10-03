@@ -1,4 +1,4 @@
-import { AccidentalSign, Clef, Note, NoteNameSystem } from './types';
+import type { AccidentalSign, Clef, Note, NoteNameSystem } from './types.ts';
 
 /** All notes in treble clef: staff (E4–F5) + 1 ledger line above/below */
 const TREBLE_NOTES: Note[] = [

@@ -1,6 +1,6 @@
-import { intervalSemitones, qualitiesForDegree, qualityFilterForScope } from './intervals';
-import { ALL_TONIC_IDS, getTonic, SpelledNote, spelledNoteId, spellFromTonic } from './scales';
-import { IntervalQuality, IntervalQualityScope } from './types';
+import { intervalSemitones, qualitiesForDegree, qualityFilterForScope } from './intervals.ts';
+import { ALL_TONIC_IDS, getTonic, spelledNoteId, spellFromTonic, type SpelledNote } from './scales.ts';
+import type { IntervalQuality, IntervalQualityScope } from './types.ts';
 
 /**
  * Degrees this mode asks. The octave is left out: its target is the root note itself,

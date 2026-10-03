@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { detectPitch, DetectedNote, frequencyToNote, rms } from './pitch';
+import { detectPitch, frequencyToNote, rms, type DetectedNote } from './pitch.ts';
 
 /**
  * Live note input from a guitar plugged into an audio interface, or from the

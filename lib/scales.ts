@@ -1,6 +1,6 @@
-import { MAJOR_KEYS } from './fifths';
-import { displaySpelledNote, LETTER_BASE_SEMITONE, NOTE_LETTERS, SIGN_SEMITONE } from './notes';
-import { AccidentalSign, NoteNameSystem, ScaleType } from './types';
+import { MAJOR_KEYS } from './fifths.ts';
+import { displaySpelledNote, LETTER_BASE_SEMITONE, NOTE_LETTERS, SIGN_SEMITONE } from './notes.ts';
+import type { AccidentalSign, NoteNameSystem, ScaleType } from './types.ts';
 
 /** Notes in a scale, tonic included; the octave repeat adds nothing to memorise. */
 export const SCALE_DEGREES = 7;

@@ -1,4 +1,4 @@
-import { Clef } from './types';
+import type { Clef } from './types.ts';
 
 export const STAFF_LINE_SPACING = 13;
 

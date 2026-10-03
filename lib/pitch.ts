@@ -1,4 +1,4 @@
-import type { AccidentalSign } from './types';
+import type { AccidentalSign } from './types.ts';
 
 /**
  * Monophonic pitch detection (YIN) plus the frequency → note-name conversion.

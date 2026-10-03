@@ -1,15 +1,15 @@
 'use client';
 
 import { useCallback, useSyncExternalStore } from 'react';
-import { useHydrated } from './client';
-import { AllNoteStats, ExerciseConfig, TrainingMode } from './types';
-import { ALL_NOTES, getDefaultEnabledNotes, noteId } from './notes';
-import { ALL_QUESTION_KINDS, getDefaultEnabledKeys } from './fifths';
-import { ALL_RELATIVE_QUESTION_KINDS } from './relatives';
-import { getDefaultEnabledDegrees } from './intervals';
-import { getDefaultBuildDegrees, getDefaultEnabledRoots } from './intervalBuild';
-import { ALL_SCALE_TYPES, getDefaultEnabledTonics } from './scales';
-import { DEFAULT_A4 } from './pitch';
+import { useHydrated } from './client.ts';
+import type { AllNoteStats, ExerciseConfig, TrainingMode } from './types.ts';
+import { ALL_NOTES, getDefaultEnabledNotes, noteId } from './notes.ts';
+import { ALL_QUESTION_KINDS, getDefaultEnabledKeys } from './fifths.ts';
+import { ALL_RELATIVE_QUESTION_KINDS } from './relatives.ts';
+import { getDefaultEnabledDegrees } from './intervals.ts';
+import { getDefaultBuildDegrees, getDefaultEnabledRoots } from './intervalBuild.ts';
+import { ALL_SCALE_TYPES, getDefaultEnabledTonics } from './scales.ts';
+import { DEFAULT_A4 } from './pitch.ts';
 
 const STATS_KEY = 'note-coach-stats';
 const CONFIG_KEY = 'note-coach-config';
