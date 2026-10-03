@@ -3,28 +3,39 @@
 import { useSyncExternalStore } from 'react';
 
 const DARK_MODE_QUERY = '(prefers-color-scheme: dark)';
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
-function subscribeToColorScheme(onStoreChange: () => void) {
-  if (typeof window === 'undefined') {
-    return () => undefined;
-  }
+/** Both halves are built once per query: `useSyncExternalStore` resubscribes whenever they change identity. */
+function mediaQueryStore(query: string) {
+  const subscribe = (onStoreChange: () => void) => {
+    if (typeof window === 'undefined') {
+      return () => undefined;
+    }
 
-  const mediaQuery = window.matchMedia(DARK_MODE_QUERY);
-  const handleChange = () => onStoreChange();
-  mediaQuery.addEventListener('change', handleChange);
-  return () => mediaQuery.removeEventListener('change', handleChange);
+    const mediaQuery = window.matchMedia(query);
+    const handleChange = () => onStoreChange();
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  };
+
+  const getSnapshot = () => typeof window !== 'undefined' && window.matchMedia(query).matches;
+
+  return { subscribe, getSnapshot };
 }
 
-function getDarkModeSnapshot() {
-  return typeof window !== 'undefined' && window.matchMedia(DARK_MODE_QUERY).matches;
-}
+const darkMode = mediaQueryStore(DARK_MODE_QUERY);
+const reducedMotion = mediaQueryStore(REDUCED_MOTION_QUERY);
 
 function subscribeToNothing() {
   return () => undefined;
 }
 
 export function usePrefersDark() {
-  return useSyncExternalStore(subscribeToColorScheme, getDarkModeSnapshot, () => false);
+  return useSyncExternalStore(darkMode.subscribe, darkMode.getSnapshot, () => false);
+}
+
+export function usePrefersReducedMotion() {
+  return useSyncExternalStore(reducedMotion.subscribe, reducedMotion.getSnapshot, () => false);
 }
 
 export function useHydrated() {

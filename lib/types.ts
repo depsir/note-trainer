@@ -109,6 +109,13 @@ export interface AudioInputConfig {
   strictOctave: boolean;
 }
 
+export interface SheetConfig {
+  /** Read a written piece of several bars instead of one note at a time */
+  enabled: boolean;
+  /** How many 4/4 bars the piece spans */
+  measures: number;
+}
+
 export interface ScalesConfig {
   /** Which scale shapes to ask */
   enabledTypes: ScaleType[];
@@ -139,6 +146,8 @@ export interface ExerciseConfig {
   intervalBuild: IntervalBuildConfig;
   /** Scale training mode settings */
   scales: ScalesConfig;
+  /** Sheet-reading settings for the note-reading mode */
+  sheet: SheetConfig;
   /** Guitar / microphone input settings */
   audio: AudioInputConfig;
 }

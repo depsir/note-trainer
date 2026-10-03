@@ -36,6 +36,7 @@ import {
   RELATIVE_QUESTION_KIND_HINT,
   RELATIVE_QUESTION_KIND_LABEL,
 } from '@/lib/relatives';
+import { MEASURE_OPTIONS, sheetNoteCount } from '@/lib/sheet';
 import {
   ALL_SCALE_TYPES,
   displaySpelledNoteName,
@@ -248,6 +249,9 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
   const isIntervals = draft.mode === 'intervals';
   const isRelatives = draft.mode === 'relatives';
   const isIntervalBuild = draft.mode === 'interval-build';
+  const isNotes = draft.mode === 'notes';
+  // A piece ends when its last note is read, so there is no duration to set.
+  const isSheet = isNotes && draft.sheet.enabled;
   // Scales, relative keys and built intervals are asked and answered by name — nothing is ever drawn on a staff.
   const usesStaff = !isScales && !isRelatives && !isIntervalBuild;
 
@@ -283,7 +287,8 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
               ⚠️ Sessione in corso — le modifiche saranno applicate alla prossima sessione.
             </div>
           )}
-          {/* Duration */}
+          {/* Duration — a sheet is as long as its bars, so it has no clock */}
+          {!isSheet && (
           <section>
             <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide mb-2">Durata</h3>
             <div className="flex flex-wrap gap-2">
@@ -303,6 +308,7 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
               ))}
             </div>
           </section>
+          )}
 
           {/* Clef */}
           {usesStaff && (
@@ -350,6 +356,57 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
               ))}
             </div>
           </section>
+
+          {/* Sheet reading — a setting of note reading, not a mode of its own */}
+          {isNotes && (
+          <section>
+            <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide mb-2">Spartito</h3>
+            <button
+              onClick={() => setDraft({ ...draft, sheet: { ...draft.sheet, enabled: !draft.sheet.enabled } })}
+              className={[
+                'w-full px-4 py-2 rounded-xl text-left border-2 transition-colors',
+                draft.sheet.enabled
+                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300',
+              ].join(' ')}
+            >
+              <span className="block text-sm font-semibold">
+                {draft.sheet.enabled ? '✓ Attivo — leggi un brano scritto' : 'Disattivo — una nota alla volta'}
+              </span>
+              <span className={['block text-xs', draft.sheet.enabled ? 'text-indigo-100' : 'text-zinc-400'].join(' ')}>
+                {draft.sheet.enabled
+                  ? 'Le battute scorrono da sole mentre le completi, senza timer'
+                  : 'Una nota a caso dopo l’altra, a tempo'}
+              </span>
+            </button>
+
+            {draft.sheet.enabled && (
+              <div className="mt-3">
+                <span className="block text-xs text-zinc-400 mb-1">Lunghezza del brano</span>
+                <div className="flex flex-wrap gap-2">
+                  {MEASURE_OPTIONS.map((measures) => (
+                    <button
+                      key={measures}
+                      onClick={() => setDraft({ ...draft, sheet: { ...draft.sheet, measures } })}
+                      className={[
+                        'px-4 py-2 rounded-xl text-sm font-semibold border-2 transition-colors',
+                        draft.sheet.measures === measures
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300',
+                      ].join(' ')}
+                    >
+                      {measures} batt.
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">
+                  4/4 in semiminime: {sheetNoteCount(draft.sheet.measures)} note da leggere.
+                  Il brano è tutto in una chiave sola, scelta fra quelle attive.
+                </p>
+              </div>
+            )}
+          </section>
+          )}
 
           {/* Adaptive — adaptive weighting only applies to note reading */}
           {draft.mode === 'notes' && (

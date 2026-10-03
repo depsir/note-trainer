@@ -9,19 +9,25 @@ interface SessionHudProps {
   timeLeft: number;
   showTimer: boolean;
   onStop: () => void;
+  /** Replaces the tally, for modes counted by something other than taps */
+  scoreLabel?: string;
+  /** Shown where the timer would be, for untimed modes that still have somewhere to be */
+  detail?: string;
 }
 
-export default function SessionHud({ correct, total, timeLeft, showTimer, onStop }: SessionHudProps) {
+export default function SessionHud({ correct, total, timeLeft, showTimer, onStop, scoreLabel, detail }: SessionHudProps) {
   return (
     <div className="flex items-center justify-between w-full">
       <span className="text-sm font-semibold text-zinc-500">
-        {correct}/{total} corrette
+        {scoreLabel ?? `${correct}/${total} corrette`}
       </span>
       <div className="flex items-center gap-3">
-        {showTimer && (
+        {showTimer ? (
           <span className={['text-sm font-mono font-bold', timeLeft <= 10 ? 'text-red-500' : 'text-zinc-600 dark:text-zinc-400'].join(' ')}>
             {formatTime(timeLeft)}
           </span>
+        ) : (
+          detail && <span className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">{detail}</span>
         )}
         <button onClick={onStop} className="text-sm px-3 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-red-100 dark:hover:bg-red-900 hover:text-red-600 dark:hover:text-red-400 font-semibold transition-colors">
           ■ Fine

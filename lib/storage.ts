@@ -9,6 +9,7 @@ import { ALL_RELATIVE_QUESTION_KINDS } from './relatives.ts';
 import { getDefaultEnabledDegrees } from './intervals.ts';
 import { getDefaultBuildDegrees, getDefaultEnabledRoots } from './intervalBuild.ts';
 import { ALL_SCALE_TYPES, getDefaultEnabledTonics } from './scales.ts';
+import { DEFAULT_MEASURES } from './sheet.ts';
 import { DEFAULT_A4 } from './pitch.ts';
 
 const STATS_KEY = 'note-coach-stats';
@@ -44,6 +45,10 @@ const DEFAULT_CONFIG: ExerciseConfig = {
   scales: {
     enabledTypes: [...ALL_SCALE_TYPES],
     enabledTonics: getDefaultEnabledTonics(),
+  },
+  sheet: {
+    enabled: false,
+    measures: DEFAULT_MEASURES,
   },
   audio: {
     enabled: false,
@@ -145,6 +150,7 @@ function getConfigSnapshot() {
     intervals: { ...DEFAULT_CONFIG.intervals, ...savedConfig.intervals },
     intervalBuild: { ...DEFAULT_CONFIG.intervalBuild, ...savedConfig.intervalBuild },
     scales: { ...DEFAULT_CONFIG.scales, ...savedConfig.scales },
+    sheet: { ...DEFAULT_CONFIG.sheet, ...savedConfig.sheet },
     audio: { ...DEFAULT_CONFIG.audio, ...savedConfig.audio },
   });
   return cachedConfigValue;

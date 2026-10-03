@@ -44,3 +44,73 @@ svg:not(.lucide) {
 .animate-fade-out {
   animation: fade-out 0.6s ease forwards;
 }
+
+/* Sheet reading — the score is as wide as the piece and scrolls sideways, so it
+   opts out of the rule above that makes staff SVGs fill their container. */
+.sheet-score svg:not(.lucide) {
+  width: auto;
+  max-width: none;
+}
+
+/* Note states. VexFlow writes its colours as presentation attributes on the paths it
+   draws, and any rule here outranks those — which is what lets a note be recoloured
+   without redrawing the score. */
+.sheet-note {
+  --sheet-done: #16a34a;
+  --sheet-fumbled: #d97706;
+  --sheet-current: #4f46e5;
+  --sheet-wrong: #dc2626;
+  transition: filter 0.15s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  .sheet-note {
+    --sheet-done: #4ade80;
+    --sheet-fumbled: #fbbf24;
+    --sheet-current: #818cf8;
+    --sheet-wrong: #f87171;
+  }
+}
+
+.sheet-note.is-done,
+.sheet-note.is-done * {
+  fill: var(--sheet-done);
+  stroke: var(--sheet-done);
+}
+
+.sheet-note.is-fumbled,
+.sheet-note.is-fumbled * {
+  fill: var(--sheet-fumbled);
+  stroke: var(--sheet-fumbled);
+}
+
+.sheet-note.is-current,
+.sheet-note.is-current * {
+  fill: var(--sheet-current);
+  stroke: var(--sheet-current);
+}
+
+.sheet-note.is-current {
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--sheet-current) 55%, transparent));
+}
+
+.sheet-note.is-wrong,
+.sheet-note.is-wrong * {
+  fill: var(--sheet-wrong);
+  stroke: var(--sheet-wrong);
+}
+
+.sheet-note.is-wrong {
+  animation: sheet-note-shake 0.3s ease;
+}
+
+@keyframes sheet-note-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-note.is-wrong { animation: none; }
+  .sheet-note { transition: none; }
+}

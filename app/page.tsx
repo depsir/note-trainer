@@ -11,6 +11,7 @@ import ModeSelector from '@/components/ModeSelector';
 import NotesTrainer from '@/components/NotesTrainer';
 import RelativesTrainer from '@/components/RelativesTrainer';
 import ScalesTrainer from '@/components/ScalesTrainer';
+import SheetTrainer from '@/components/SheetTrainer';
 import { useNoteStats } from '@/lib/storage';
 import { SessionPhase } from '@/lib/session';
 import { TrainingMode } from '@/lib/types';
@@ -56,6 +57,9 @@ export default function HomePage() {
           <IntervalTrainer config={config} phase={phase} onPhaseChange={setPhase} />
         ) : config.mode === 'interval-build' ? (
           <IntervalBuildTrainer config={config} phase={phase} onPhaseChange={setPhase} />
+        ) : config.sheet.enabled ? (
+          // Note reading, written out as a piece instead of one note at a time
+          <SheetTrainer config={config} phase={phase} onPhaseChange={setPhase} />
         ) : (
           <NotesTrainer config={config} phase={phase} onPhaseChange={setPhase} />
         )}

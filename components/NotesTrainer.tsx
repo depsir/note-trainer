@@ -111,7 +111,21 @@ export default function NotesTrainer({ config, phase, onPhaseChange }: NotesTrai
     onNote: handleHeard,
   });
 
-  if (phase === 'idle') {
+  if (phase === 'finished') {
+    return (
+      <SessionSummary
+        correct={sessionCorrect}
+        total={sessionTotal}
+        onRestart={startSession}
+        onHome={() => onPhaseChange('idle')}
+        showStatsLink
+      />
+    );
+  }
+
+  // Turning the sheet setting off mid-session swaps this component in while already
+  // playing, with nothing on the staff yet: that lands back on the start screen.
+  if (phase === 'idle' || !currentNote) {
     return (
       <div className="flex flex-col items-center gap-6 w-full">
         <div className="text-center space-y-1">
@@ -134,20 +148,6 @@ export default function NotesTrainer({ config, phase, onPhaseChange }: NotesTrai
       </div>
     );
   }
-
-  if (phase === 'finished') {
-    return (
-      <SessionSummary
-        correct={sessionCorrect}
-        total={sessionTotal}
-        onRestart={startSession}
-        onHome={() => onPhaseChange('idle')}
-        showStatsLink
-      />
-    );
-  }
-
-  if (!currentNote) return null;
 
   return (
     <>
