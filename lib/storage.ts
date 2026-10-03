@@ -9,6 +9,7 @@ import { ALL_RELATIVE_QUESTION_KINDS } from './relatives';
 import { getDefaultEnabledDegrees } from './intervals';
 import { getDefaultBuildDegrees, getDefaultEnabledRoots } from './intervalBuild';
 import { ALL_SCALE_TYPES, getDefaultEnabledTonics } from './scales';
+import { DEFAULT_A4 } from './pitch';
 
 const STATS_KEY = 'note-coach-stats';
 const CONFIG_KEY = 'note-coach-config';
@@ -43,6 +44,12 @@ const DEFAULT_CONFIG: ExerciseConfig = {
   scales: {
     enabledTypes: [...ALL_SCALE_TYPES],
     enabledTonics: getDefaultEnabledTonics(),
+  },
+  audio: {
+    enabled: false,
+    deviceId: '',
+    a4: DEFAULT_A4,
+    strictOctave: false,
   },
 };
 
@@ -138,6 +145,7 @@ function getConfigSnapshot() {
     intervals: { ...DEFAULT_CONFIG.intervals, ...savedConfig.intervals },
     intervalBuild: { ...DEFAULT_CONFIG.intervalBuild, ...savedConfig.intervalBuild },
     scales: { ...DEFAULT_CONFIG.scales, ...savedConfig.scales },
+    audio: { ...DEFAULT_CONFIG.audio, ...savedConfig.audio },
   });
   return cachedConfigValue;
 }

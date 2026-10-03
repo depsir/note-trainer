@@ -1,12 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import GuitarInput, { GuitarAnswer } from '@/components/GuitarInput';
 import NoteButtons from '@/components/NoteButtons';
 import SessionHud from '@/components/SessionHud';
 import SessionSummary from '@/components/SessionSummary';
 import StaffDisplay from '@/components/StaffDisplay';
 import { useNoteStats } from '@/lib/storage';
-import { ALL_NOTES, noteId } from '@/lib/notes';
+import { ALL_NOTES, guitarSoundingMidi, noteId } from '@/lib/notes';
+import { HeardNote, useAudioInput } from '@/lib/audioInput';
 import { pickNote, updateWeight, initStats } from '@/lib/adaptive';
 import { CORRECT_FEEDBACK_DELAY_MS, FlashType, formatTime, SessionPhase, useSessionClock } from '@/lib/session';
 import { ExerciseConfig, Note } from '@/lib/types';
@@ -22,6 +24,7 @@ export default function NotesTrainer({ config, phase, onPhaseChange }: NotesTrai
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [flash, setFlash] = useState<FlashType>(null);
   const [lastAnswer, setLastAnswer] = useState<{ letter: string; correct: boolean } | null>(null);
+  const [lastHeard, setLastHeard] = useState<GuitarAnswer | null>(null);
   const [sessionCorrect, setSessionCorrect] = useState(0);
   const [sessionTotal, setSessionTotal] = useState(0);
   const lastNoteIdRef = useRef<string | undefined>(undefined);
@@ -50,6 +53,7 @@ export default function NotesTrainer({ config, phase, onPhaseChange }: NotesTrai
     noteShownAtRef.current = Date.now();
     setFlash(null);
     setLastAnswer(null);
+    setLastHeard(null);
   }, [candidates, config.useAdaptive]);
 
   const startSession = useCallback(() => {
@@ -62,11 +66,10 @@ export default function NotesTrainer({ config, phase, onPhaseChange }: NotesTrai
     nextNote(newStats);
   }, [candidates, nextNote, onPhaseChange, startClock, updateStats]);
 
-  const handleAnswer = useCallback((letter: string) => {
+  const registerAnswer = useCallback((correct: boolean, buttonLetter: string | null) => {
     if (!currentNote || phase !== 'playing') return;
-    const correct = letter === currentNote.letter;
     const responseTimeMs = Date.now() - noteShownAtRef.current;
-    setLastAnswer({ letter, correct });
+    if (buttonLetter !== null) setLastAnswer({ letter: buttonLetter, correct });
     setSessionTotal((t) => t + 1);
     const newStats = updateWeight(statsRef.current, noteId(currentNote), correct, responseTimeMs);
     updateStats(newStats);
@@ -79,6 +82,35 @@ export default function NotesTrainer({ config, phase, onPhaseChange }: NotesTrai
     }
   }, [currentNote, phase, nextNote, updateStats]);
 
+  const handleAnswer = useCallback(
+    (letter: string) => registerAnswer(letter === currentNote?.letter, letter),
+    [currentNote, registerAnswer]
+  );
+
+  const handleHeard = useCallback(
+    (note: HeardNote) => {
+      if (!currentNote) return;
+      const correct = config.audio.strictOctave
+        ? note.midi === guitarSoundingMidi(currentNote)
+        : note.accidental === '' && note.letter === currentNote.letter;
+      // An accidental has no button of its own, and lighting up its letter
+      // would read as the right note being rejected — the panel says what was
+      // heard instead.
+      setLastHeard({ note, correct });
+      registerAnswer(correct, note.accidental === '' ? note.letter : null);
+    },
+    [currentNote, config.audio.strictOctave, registerAnswer]
+  );
+
+  const audio = useAudioInput({
+    enabled: config.audio.enabled && phase === 'playing',
+    deviceId: config.audio.deviceId,
+    a4: config.audio.a4,
+    // A string still ringing from the last answer must not answer the next one.
+    paused: flash === 'correct',
+    onNote: handleHeard,
+  });
+
   if (phase === 'idle') {
     return (
       <div className="flex flex-col items-center gap-6 w-full">
@@ -90,6 +122,7 @@ export default function NotesTrainer({ config, phase, onPhaseChange }: NotesTrai
             {config.durationSeconds === 0 ? 'Tempo illimitato' : formatTime(config.durationSeconds)}
             {' · '}{config.useAdaptive ? 'Adattivo' : 'Casuale'}
             {' · '}{config.nameSystem === 'italian' ? 'Do Re Mi' : 'C D E'}
+            {config.audio.enabled ? ' · 🎸 Chitarra' : ''}
           </p>
         </div>
         <button
@@ -141,6 +174,15 @@ export default function NotesTrainer({ config, phase, onPhaseChange }: NotesTrai
       <p className="text-xs text-zinc-400 -mt-2">
         {currentNote.clef === 'treble' ? 'Chiave di Violino' : 'Chiave di Basso'}
       </p>
+
+      <GuitarInput
+        status={audio.status}
+        error={audio.error}
+        level={audio.level}
+        heard={audio.heard}
+        nameSystem={config.nameSystem}
+        answer={lastHeard}
+      />
 
       <NoteButtons
         onSelect={handleAnswer}

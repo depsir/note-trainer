@@ -11,6 +11,7 @@ import {
 } from '@/lib/types';
 import { ALL_NOTES, noteId } from '@/lib/notes';
 import { X } from 'lucide-react';
+import AudioInputSettings from '@/components/AudioInputSettings';
 import InteractiveStaff from '@/components/InteractiveStaff';
 import {
   ALL_QUESTION_KINDS,
@@ -366,6 +367,15 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
               {draft.useAdaptive ? '✓ Attivo — propone più le note difficili' : 'Disattivo — casuale uniforme'}
             </button>
           </section>
+          )}
+
+          {/* Guitar input — note reading is the only mode that takes it so far */}
+          {draft.mode === 'notes' && (
+            <AudioInputSettings
+              value={draft.audio}
+              nameSystem={draft.nameSystem}
+              onChange={(audio) => setDraft({ ...draft, audio })}
+            />
           )}
 
           {/* Circle-of-fifths question kinds */}

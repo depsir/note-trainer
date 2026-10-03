@@ -98,6 +98,17 @@ export interface IntervalBuildConfig {
   enabledRoots: string[];
 }
 
+export interface AudioInputConfig {
+  /** Answer by playing the note, alongside the buttons */
+  enabled: boolean;
+  /** Chosen input device; empty means the system default */
+  deviceId: string;
+  /** Concert pitch the heard notes are named against */
+  a4: number;
+  /** Require the written octave too, not just the note name */
+  strictOctave: boolean;
+}
+
 export interface ScalesConfig {
   /** Which scale shapes to ask */
   enabledTypes: ScaleType[];
@@ -128,6 +139,8 @@ export interface ExerciseConfig {
   intervalBuild: IntervalBuildConfig;
   /** Scale training mode settings */
   scales: ScalesConfig;
+  /** Guitar / microphone input settings */
+  audio: AudioInputConfig;
 }
 
 export interface SessionResult {

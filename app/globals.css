@@ -27,8 +27,9 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* VexFlow SVG should fill its container */
-svg {
+/* Staff SVGs — VexFlow's and the hand-drawn one — fill their container.
+   Icons are excluded: lucide sizes its SVGs by attribute, which a width here would override. */
+svg:not(.lucide) {
   display: block;
   width: 100%;
   height: auto;

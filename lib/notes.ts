@@ -94,3 +94,18 @@ export const LETTER_BASE_SEMITONE: Record<string, number> = { C: 0, D: 2, E: 4, 
 
 /** How much a written accidental shifts the pitch. */
 export const SIGN_SEMITONE: Record<AccidentalSign, number> = { '': 0, '#': 1, b: -1 };
+
+/** MIDI number of a written note, e.g. "c/4" (middle C) is 60. */
+export function writtenMidi(note: Note): number {
+  return (note.octave + 1) * 12 + LETTER_BASE_SEMITONE[note.letter];
+}
+
+/**
+ * The pitch a guitar actually sounds when reading this note.
+ *
+ * Guitar parts in treble clef are written an octave above the sounding pitch;
+ * the bass clef here is read at concert pitch, as a piano would.
+ */
+export function guitarSoundingMidi(note: Note): number {
+  return note.clef === 'treble' ? writtenMidi(note) - 12 : writtenMidi(note);
+}
