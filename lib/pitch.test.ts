@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { detectPitch, frequencyToNote, rms } from './pitch.ts';
+import { detectPitch, frequencyToNote, levelToMeter, rms } from './pitch.ts';
 
 const SAMPLE_RATE = 44100;
 const WINDOW = 2048;
@@ -164,5 +164,24 @@ describe('rms', () => {
   it('is the amplitude over root two for a sine', () => {
     const samples = synthesize(440, [1], { length: 4410 });
     assert.ok(Math.abs(rms(samples) - 0.3 / Math.SQRT2) < 0.01);
+  });
+});
+
+describe('levelToMeter', () => {
+  it('is empty for silence and at the floor', () => {
+    assert.equal(levelToMeter(0), 0);
+    assert.equal(levelToMeter(0.001), 0);
+    assert.equal(levelToMeter(0.0001), 0);
+  });
+
+  it('is full at full scale and above', () => {
+    assert.equal(levelToMeter(1), 1);
+    assert.equal(levelToMeter(2), 1);
+  });
+
+  it('is linear in decibels', () => {
+    // −40 dBFS and −20 dBFS on a −60…0 scale
+    assert.ok(Math.abs(levelToMeter(0.01) - 1 / 3) < 1e-9);
+    assert.ok(Math.abs(levelToMeter(0.1) - 2 / 3) < 1e-9);
   });
 });

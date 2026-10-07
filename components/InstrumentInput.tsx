@@ -2,7 +2,7 @@
 
 import { Mic, MicOff } from 'lucide-react';
 import { displaySpelledNote } from '@/lib/notes';
-import { AudioInput } from '@/lib/audioInput';
+import { AudioInput, NOISE_GATE_METER } from '@/lib/audioInput';
 import { isTransposing, writtenPitch } from '@/lib/instruments';
 import { DetectedNote } from '@/lib/pitch';
 import { Clef, InstrumentId, NoteNameSystem } from '@/lib/types';
@@ -109,10 +109,18 @@ export default function InstrumentInput({
         )}
       </div>
 
-      <div className={['mt-2 h-1.5 rounded-full overflow-hidden', wrong ? 'bg-red-100 dark:bg-red-900/50' : 'bg-zinc-100 dark:bg-zinc-800'].join(' ')}>
+      <div className={['relative mt-2 h-1.5 rounded-full overflow-hidden', wrong ? 'bg-red-100 dark:bg-red-900/50' : 'bg-zinc-100 dark:bg-zinc-800'].join(' ')}>
+        {/* Below the tick the input counts as silence, and nothing is detected. */}
         <div
-          className={['h-full rounded-full transition-[width] duration-75', wrong ? 'bg-red-400' : 'bg-indigo-500'].join(' ')}
+          className={[
+            'h-full rounded-full transition-[width] duration-75',
+            wrong ? 'bg-red-400' : level >= NOISE_GATE_METER ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-600',
+          ].join(' ')}
           style={{ width: `${Math.round(level * 100)}%` }}
+        />
+        <div
+          className="absolute inset-y-0 w-px bg-zinc-400 dark:bg-zinc-500"
+          style={{ left: `${NOISE_GATE_METER * 100}%` }}
         />
       </div>
     </div>

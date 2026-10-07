@@ -124,6 +124,19 @@ export function rms(samples: Float32Array): number {
   return Math.sqrt(sum / samples.length);
 }
 
+/** Quietest level a meter shows; anything below it reads as an empty bar. */
+export const METER_FLOOR_DB = -60;
+
+/**
+ * Places an RMS level on a 0–1 meter that is linear in decibels, from
+ * `METER_FLOOR_DB` to full scale. A linear meter leaves a perfectly usable
+ * guitar signal as a sliver at the bottom, which reads as "too quiet".
+ */
+export function levelToMeter(level: number): number {
+  if (level <= 0) return 0;
+  return clamp01(1 - (20 * Math.log10(level)) / METER_FLOOR_DB);
+}
+
 export function frequencyToMidi(frequency: number, a4 = DEFAULT_A4): number {
   return 69 + 12 * Math.log2(frequency / a4);
 }

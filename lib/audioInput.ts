@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { getInstrument } from './instruments.ts';
-import { detectPitch, frequencyToNote, rms, type DetectedNote } from './pitch.ts';
+import { detectPitch, frequencyToNote, levelToMeter, rms, type DetectedNote } from './pitch.ts';
 import type { InstrumentId } from './types.ts';
 
 /**
@@ -21,6 +21,8 @@ const FFT_SIZE = 2048;
 const HIGHPASS_HZ = 70;
 /** Below this level the input counts as silence. */
 const NOISE_GATE = 0.01;
+/** Where the noise gate sits on the meter, so a player can see whether they clear it. */
+export const NOISE_GATE_METER = levelToMeter(NOISE_GATE);
 /** How periodic a window must look before its pitch is believed. */
 const MIN_CLARITY = 0.9;
 /** Frames that must agree on the same pitch before it counts as played. */
@@ -35,8 +37,6 @@ const LOCKOUT_MS = 350;
 const ATTACK_SETTLE_MS = 60;
 /** The meter and the readout refresh at this interval, not once per frame. */
 const DISPLAY_INTERVAL_MS = 50;
-/** Level that reads as a full meter. */
-const FULL_SCALE = 0.25;
 /** The readout keeps showing the last note this long, so it does not flicker between plucks. */
 const READOUT_HOLD_MS = 600;
 
@@ -64,7 +64,7 @@ export interface AudioInputOptions {
 export interface AudioInput {
   status: AudioInputStatus;
   error: string | null;
-  /** Input level, already scaled to 0–1 for a meter */
+  /** Input level on a 0–1 meter scale that is linear in decibels */
   level: number;
   /** What is being heard right now, or null when the input is quiet */
   heard: (DetectedNote & { frequency: number; clarity: number }) | null;
@@ -262,7 +262,7 @@ export function useAudioInput({ enabled, deviceId, a4, instrument, paused, onNot
 
         if (now - lastDisplayAt >= DISPLAY_INTERVAL_MS) {
           lastDisplayAt = now;
-          setLevel(Math.min(1, currentLevel / FULL_SCALE));
+          setLevel(levelToMeter(currentLevel));
           if (note && clear) {
             setHeard({ ...note, frequency: clear.frequency, clarity: clear.clarity });
           } else if (now - lastHeardAt > READOUT_HOLD_MS) {
