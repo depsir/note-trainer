@@ -19,6 +19,8 @@ interface InstrumentInputProps extends Pick<AudioInput, 'status' | 'error' | 'le
   clef: Clef;
   /** The last note taken as an answer; stays put until the next question */
   answer?: PlayedAnswer | null;
+  /** Whether the octave is part of the answer, and so worth naming on it */
+  strictOctave?: boolean;
 }
 
 /** Within this much of the tempered pitch the note reads as in tune. */
@@ -33,6 +35,7 @@ export default function InstrumentInput({
   instrument,
   clef,
   answer,
+  strictOctave = false,
 }: InstrumentInputProps) {
   if (status === 'off') return null;
 
@@ -96,6 +99,8 @@ export default function InstrumentInput({
           >
             {answer.correct ? '✓' : '✗'}
             {answerWritten && displaySpelledNote(answerWritten.letter, answerWritten.accidental, nameSystem)}
+            {/* Without it, a right name in the wrong octave reads as the right note rejected. */}
+            {answerWritten && strictOctave && answerWritten.octave}
           </span>
         ) : (
           heard && (

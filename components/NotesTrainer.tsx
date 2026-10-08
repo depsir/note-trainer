@@ -193,6 +193,7 @@ export default function NotesTrainer({ config, phase, onPhaseChange }: NotesTrai
         instrument={config.audio.instrument}
         clef={currentNote.clef}
         answer={lastHeard}
+        strictOctave={config.audio.strictOctave}
       />
 
       <NoteButtons

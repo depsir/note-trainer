@@ -240,6 +240,7 @@ export default function SheetTrainer({ config, phase, onPhaseChange }: SheetTrai
         instrument={config.audio.instrument}
         clef={sheet.clef}
         answer={lastHeard}
+        strictOctave={config.audio.strictOctave}
       />
 
       <NoteButtons
