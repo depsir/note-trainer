@@ -1,5 +1,5 @@
 import { ACCIDENTAL_TYPE_SYMBOL } from './fifths.ts';
-import { getNotesByClef, LETTER_BASE_SEMITONE, NOTE_LETTERS, displayNoteName } from './notes.ts';
+import { DEFAULT_LEDGER_LINES, getNotesByClef, LETTER_BASE_SEMITONE, NOTE_LETTERS, displayNoteName } from './notes.ts';
 import type { AccidentalType, Clef, IntervalQuality, IntervalQualityScope, NoteNameSystem } from './types.ts';
 
 /** Interval numbers this app quizzes: 2nd through 8th (unison is skipped — degenerate/rarely drilled). */
@@ -81,7 +81,8 @@ export function targetVexKey(question: IntervalQuestion): string {
  * Precomputed once — the search space is tiny and never changes at runtime.
  */
 function buildCandidates(clef: Clef): IntervalQuestion[] {
-  const clefNotes = getNotesByClef(clef);
+  // Intervals stay within the staff and one ledger line, whatever range note reading reaches.
+  const clefNotes = getNotesByClef(clef, DEFAULT_LEDGER_LINES);
   const positions = new Set(clefNotes.map((n) => `${n.letter}${n.octave}`));
   const accidentals: AccidentalType[] = ['none', 'sharp', 'flat'];
   const results: IntervalQuestion[] = [];

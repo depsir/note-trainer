@@ -75,7 +75,12 @@ export default function StatsPage() {
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
   const [sortMode, setSortMode] = useState<SortMode>('note');
 
-  const clefNotes = ALL_NOTES.filter((n) => n.clef === activeClef);
+  // The practised range, plus anything outside it that was answered before the range narrowed
+  const clefNotes = ALL_NOTES.filter((n) => {
+    if (n.clef !== activeClef) return false;
+    const noteStats = normalizeNoteStats(stats[noteId(n)]);
+    return n.ledgerLines <= config.ledgerLines || noteStats.correct + noteStats.wrong > 0;
+  });
   const activeNoteIds = config.enabledNotes;
   const activeNoteCount = activeNoteIds.length;
   const unseenActiveNotes = activeNoteIds.filter((id) => {

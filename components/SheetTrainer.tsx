@@ -53,6 +53,11 @@ export default function SheetTrainer({ config, phase, onPhaseChange }: SheetTrai
     [config.enabledNotes]
   );
 
+  const clefRange = useMemo(
+    () => candidates.filter((n) => n.clef === sheet?.clef),
+    [candidates, sheet?.clef]
+  );
+
   const noteCount = sheetNoteCount(config.sheet.measures);
   const currentIndex = answered.length;
   const currentNote = sheet?.notes[currentIndex] ?? null;
@@ -213,6 +218,7 @@ export default function SheetTrainer({ config, phase, onPhaseChange }: SheetTrai
         <SheetStaffDisplay
           notes={sheet.notes}
           clef={sheet.clef}
+          range={clefRange}
           currentIndex={currentIndex}
           fumbled={fumbled}
           wrongAttempts={wrongAttempts}

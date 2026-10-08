@@ -3,7 +3,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import { useHydrated } from './client.ts';
 import type { AllNoteStats, ExerciseConfig, TrainingMode } from './types.ts';
-import { ALL_NOTES, getDefaultEnabledNotes, noteId } from './notes.ts';
+import { ALL_NOTES, DEFAULT_LEDGER_LINES, getDefaultEnabledNotes, noteId } from './notes.ts';
 import { ALL_QUESTION_KINDS, getDefaultEnabledKeys } from './fifths.ts';
 import { ALL_RELATIVE_QUESTION_KINDS } from './relatives.ts';
 import { getDefaultEnabledDegrees } from './intervals.ts';
@@ -22,6 +22,7 @@ const DEFAULT_CONFIG: ExerciseConfig = {
   durationSeconds: 3 * 60,
   clefs: ['treble', 'bass'],
   enabledNotes: getDefaultEnabledNotes(['treble', 'bass']),
+  ledgerLines: DEFAULT_LEDGER_LINES,
   useAdaptive: true,
   nameSystem: 'italian',
   fifths: {

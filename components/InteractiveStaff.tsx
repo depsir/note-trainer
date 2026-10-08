@@ -23,6 +23,14 @@ function barColor(a: number): string {
   return '#ef4444';
 }
 
+/** The ledger lines a note at `step` needs: every even step between the staff and the note */
+function ledgerSteps(step: number): number[] {
+  const lines: number[] = [];
+  for (let s = -2; s >= step; s -= 2) lines.push(s);
+  for (let s = 10; s <= step; s += 2) lines.push(s);
+  return lines;
+}
+
 export interface InteractiveStaffProps {
   notes: Note[];
   clef: Clef;
@@ -50,11 +58,16 @@ export default function InteractiveStaff({
   const showStats = !!noteStats;
   const isSelectMode = !!enabledNotes;
 
-  // Vertical layout
-  const line1Y = showStats ? 174 : 93;   // y of bottom staff line
+  // Vertical layout: the drawing grows past one ledger line each way only as far as the notes reach
+  const steps = notes.map((note) => STAFF_STEPS[clef][note.vexKey] ?? 0);
+  const topStep = Math.max(10, ...steps);
+  const bottomStep = Math.min(-2, ...steps);
+  const headroom = (topStep - 10) * (LINE_SPACING / 2);
+  const line1Y = (showStats ? 174 : 93) + headroom;   // y of bottom staff line
   const line5Y = line1Y - 4 * LINE_SPACING; // y of top staff line
-  const statsBaseline = line5Y - STATS_BAR_GAP;
-  const svgH = line1Y + LINE_SPACING + (showStats ? 28 : 25);
+  const statsBaseline = line5Y - STATS_BAR_GAP - headroom;
+  const labelY = line1Y - bottomStep * (LINE_SPACING / 2) + 14;
+  const svgH = labelY + (showStats ? 14 : 11);
 
   const ink = dark ? '#d4d4d8' : '#18181b';
   const dimColor = dark ? '#52525b' : '#d4d4d8';
@@ -68,6 +81,8 @@ export default function InteractiveStaff({
   const noteStartX = showClef ? CLEF_W : 12;
   const slotW = (SVG_W - noteStartX - 6) / notes.length;
   const nx = (i: number) => noteStartX + (i + 0.5) * slotW;
+  // Kept short of the next slot, so neighbouring notes' ledger lines do not run together
+  const ledgerHalfW = Math.min(LEDGER_HALF_W, slotW / 2 - 1.5);
   const ny = (step: number) => line1Y - step * (LINE_SPACING / 2);
 
   return (
@@ -163,23 +178,15 @@ export default function InteractiveStaff({
               )
             )}
 
-            {/* ── Ledger line below (step −2: C4 treble / E2 bass) ─ */}
-            {step === -2 && (
+            {/* ── Ledger lines, from the staff out to the note ──── */}
+            {ledgerSteps(step).map((ledgerStep) => (
               <line
-                x1={cx - LEDGER_HALF_W} y1={ny(-2)}
-                x2={cx + LEDGER_HALF_W} y2={ny(-2)}
+                key={ledgerStep}
+                x1={cx - ledgerHalfW} y1={ny(ledgerStep)}
+                x2={cx + ledgerHalfW} y2={ny(ledgerStep)}
                 stroke={ink} strokeWidth={1.5}
               />
-            )}
-
-            {/* ── Ledger line above (step 10: A5 treble / C4 bass) ─ */}
-            {step === 10 && (
-              <line
-                x1={cx - LEDGER_HALF_W} y1={ny(10)}
-                x2={cx + LEDGER_HALF_W} y2={ny(10)}
-                stroke={ink} strokeWidth={1.5}
-              />
-            )}
+            ))}
 
             {/* ── Selection glow ───────────────────────────────── */}
             {isSelectMode && enabled && (
@@ -199,7 +206,7 @@ export default function InteractiveStaff({
 
             {/* ── Note name label ──────────────────────────────── */}
             <text
-              x={cx} y={line1Y + LINE_SPACING + 14}
+              x={cx} y={labelY}
               textAnchor="middle" fontSize={10}
               fill={labelFill}
               fontWeight={isSelectMode && enabled ? 'bold' : 'normal'}
@@ -210,7 +217,7 @@ export default function InteractiveStaff({
             {/* ── Attempt count (stats mode) ────────────────────── */}
             {showStats && total > 0 && (
               <text
-                x={cx} y={line1Y + LINE_SPACING + 25}
+                x={cx} y={labelY + 11}
                 textAnchor="middle" fontSize={7}
                 fill={dimColor}
               >

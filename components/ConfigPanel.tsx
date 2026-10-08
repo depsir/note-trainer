@@ -9,7 +9,7 @@ import {
   RelativeQuestionKind,
   ScaleType,
 } from '@/lib/types';
-import { ALL_NOTES, noteId } from '@/lib/notes';
+import { displayNoteName, getNotesByClef, MAX_LEDGER_LINES, noteId } from '@/lib/notes';
 import { X } from 'lucide-react';
 import AudioInputSettings from '@/components/AudioInputSettings';
 import InteractiveStaff from '@/components/InteractiveStaff';
@@ -81,7 +81,7 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
     if (next.length === 0) return; // at least one clef required
     // Auto-update enabledNotes to include new clef's notes
     const existingIds = new Set(draft.enabledNotes);
-    const clefNotes = ALL_NOTES.filter((n) => n.clef === clef).map((n) => noteId(n));
+    const clefNotes = getNotesByClef(clef, draft.ledgerLines).map((n) => noteId(n));
     let newEnabled: string[];
     if (draft.clefs.includes(clef)) {
       // removing clef — remove its notes
@@ -105,7 +105,7 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
   };
 
   const toggleAllClef = (clef: 'treble' | 'bass', select: boolean) => {
-    const clefNoteIds = ALL_NOTES.filter((n) => n.clef === clef).map((n) => noteId(n));
+    const clefNoteIds = getNotesByClef(clef, draft.ledgerLines).map((n) => noteId(n));
     const existing = new Set(draft.enabledNotes);
     if (select) {
       clefNoteIds.forEach((id) => existing.add(id));
@@ -115,6 +115,16 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
       clefNoteIds.forEach((id) => existing.delete(id));
     }
     setDraft({ ...draft, enabledNotes: [...existing] });
+  };
+
+  /** Widening the range brings its new notes in; narrowing it drops the ones left outside */
+  const setLedgerLines = (ledgerLines: number) => {
+    const inRange = draft.clefs.flatMap((clef) => getNotesByClef(clef, ledgerLines));
+    const added = inRange.filter((n) => n.ledgerLines > draft.ledgerLines).map(noteId);
+    const kept = draft.enabledNotes.filter((id) => inRange.some((n) => noteId(n) === id));
+    let enabledNotes = [...new Set([...kept, ...added])];
+    if (enabledNotes.length < 2) enabledNotes = inRange.map(noteId); // keep at least 2 notes
+    setDraft({ ...draft, ledgerLines, enabledNotes });
   };
 
   const toggleQuestionKind = (kind: FifthsQuestionKind) => {
@@ -842,9 +852,40 @@ export default function ConfigPanel({ config, onSave, onClose, isPlaying }: Conf
             </section>
           )}
 
+          {/* Note range — how far past the staff the notes reach */}
+          {draft.mode === 'notes' && (
+            <section>
+              <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wide mb-2">Tagli addizionali</h3>
+              <div className="flex gap-2">
+                {Array.from({ length: MAX_LEDGER_LINES }, (_, i) => i + 1).map((lines) => (
+                  <button
+                    key={lines}
+                    onClick={() => setLedgerLines(lines)}
+                    className={[
+                      'flex-1 py-2 rounded-xl text-sm font-semibold border-2 transition-colors',
+                      draft.ledgerLines === lines
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300',
+                    ].join(' ')}
+                  >
+                    {lines} {lines === 1 ? 'taglio' : 'tagli'}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-zinc-400 mt-1">
+                {draft.clefs.map((clef) => {
+                  const range = getNotesByClef(clef, draft.ledgerLines);
+                  const name = (n: (typeof range)[number]) => `${displayNoteName(n.letter, draft.nameSystem)}${n.octave}`;
+                  return `${clef === 'treble' ? 'Violino' : 'Basso'} ${name(range[0])}–${name(range[range.length - 1])}`;
+                }).join(' · ')}
+                {' '}— righe sopra e sotto il pentagramma
+              </p>
+            </section>
+          )}
+
           {/* Note selection — interactive staff */}
           {draft.mode === 'notes' && draft.clefs.map((clef) => {
-            const clefNotes = ALL_NOTES.filter((n) => n.clef === clef);
+            const clefNotes = getNotesByClef(clef, draft.ledgerLines);
             const allSelected = clefNotes.every((n) => draft.enabledNotes.includes(noteId(n)));
             return (
               <section key={clef}>

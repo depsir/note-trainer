@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePrefersDark, usePrefersReducedMotion } from '@/lib/client';
 import type { Stave, StaveNote } from 'vexflow';
 import { loadVexFlow, VexFlowModule } from '@/lib/vexflow';
-import { getNotesByClef, writtenMidi } from '@/lib/notes';
+import { writtenMidi } from '@/lib/notes';
 import { BEATS_PER_MEASURE } from '@/lib/sheet';
 import { Clef, Note } from '@/lib/types';
 
@@ -12,6 +12,8 @@ interface SheetStaffDisplayProps {
   /** The whole piece, in reading order */
   notes: Note[];
   clef: Clef;
+  /** Every note of this clef the session can ask for; the box is sized to hold them all */
+  range: Note[];
   /** Index of the note being read; equals `notes.length` once the piece is finished */
   currentIndex: number;
   /** Per answered note, whether it took more than one try */
@@ -36,9 +38,9 @@ const VERTICAL_PADDING = 6;
 const MEASURE_NUMBER_ASCENT = 10;
 /**
  * Height held open until the first drawing lands, so the page does not jump.
- * A shade over what either clef asks for, so the card only ever settles inwards.
+ * A shade over what either clef asks for at its widest range, so the card only ever settles inwards.
  */
-const PLACEHOLDER_HEIGHT = 155;
+const PLACEHOLDER_HEIGHT = 175;
 const NOTE_WIDTH = 46;
 const MEASURE_WIDTH = NOTE_WIDTH * BEATS_PER_MEASURE;
 /** Extra room the first bar needs for the clef and the time signature */
@@ -84,10 +86,10 @@ class Reach {
  * Measuring the notes a piece happens to have drawn would let the box breathe between
  * pieces — one that stayed low would sit in a shorter card than the next. So what gets
  * measured is the staff itself plus the highest and the lowest note the clef can ever
- * ask for, formatted onto a stave of their own and never drawn. Every piece in a clef
- * then gets the same box, and the box never moves while the piece is being read.
+ * ask for in this session, formatted onto a stave of their own and never drawn. Every
+ * piece in a clef then gets the same box, and the box never moves while the piece is being read.
  */
-function measureStaff(stave: Stave, clef: Clef, vexflow: VexFlowModule): Reach {
+function measureStaff(stave: Stave, clef: Clef, range: Note[], vexflow: VexFlowModule): Reach {
   const { Formatter, StaveNote, Voice } = vexflow;
   const reach = new Reach();
 
@@ -100,7 +102,6 @@ function measureStaff(stave: Stave, clef: Clef, vexflow: VexFlowModule): Reach {
     if (box.getH() > 0) reach.add(box.getY(), box.getY() + box.getH());
   }
 
-  const range = getNotesByClef(clef);
   const pitches = range.map(writtenMidi);
   const extremes = [range[pitches.indexOf(Math.min(...pitches))], range[pitches.indexOf(Math.max(...pitches))]];
   const gauge = extremes.map((note) => new StaveNote({ keys: [note.vexKey], duration: 'q', clef }));
@@ -146,7 +147,7 @@ function cropToReach(svg: SVGSVGElement, reach: Reach, width: number): number {
  * Note state therefore rides on CSS classes (see `globals.css`), which outrank the
  * presentation attributes VexFlow writes onto its own paths.
  */
-export default function SheetStaffDisplay({ notes, clef, currentIndex, fumbled, wrongAttempts }: SheetStaffDisplayProps) {
+export default function SheetStaffDisplay({ notes, clef, range, currentIndex, fumbled, wrongAttempts }: SheetStaffDisplayProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const staffRef = useRef<HTMLDivElement>(null);
   const noteElementsRef = useRef<SVGElement[]>([]);
@@ -213,7 +214,7 @@ export default function SheetStaffDisplay({ notes, clef, currentIndex, fumbled, 
 
         // Every bar sits at the same height, so the first settles the box for all of them.
         // It has to be measured once drawn: until then the clef does not know where it is.
-        if (isFirst) extent = measureStaff(stave, clef, vexflow);
+        if (isFirst) extent = measureStaff(stave, clef, range, vexflow);
 
         staveNotes.forEach((staveNote) => {
           const group = staveNote.getSVGElement();
@@ -237,7 +238,7 @@ export default function SheetStaffDisplay({ notes, clef, currentIndex, fumbled, 
       noteElementsRef.current = [];
       element.innerHTML = '';
     };
-  }, [notes, clef, isDark]);
+  }, [notes, clef, range, isDark]);
 
   useEffect(() => {
     noteElementsRef.current.forEach((group, index) => {

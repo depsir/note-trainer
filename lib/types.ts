@@ -52,8 +52,8 @@ export interface Note {
   letter: string;
   /** Which clef this note belongs to */
   clef: Clef;
-  /** Whether it needs a ledger line */
-  isLedger: boolean;
+  /** How many ledger lines past the staff a range must reach to include it — see ledgerLinesAt */
+  ledgerLines: number;
 }
 
 export interface NoteStats {
@@ -137,6 +137,8 @@ export interface ExerciseConfig {
   clefs: Clef[];
   /** Note vexKeys to include (subset of all available) */
   enabledNotes: string[];
+  /** How many ledger lines above and below the staff the note picker reaches, 1 to MAX_LEDGER_LINES */
+  ledgerLines: number;
   /** Use adaptive weighting */
   useAdaptive: boolean;
   /** Note name display system */
