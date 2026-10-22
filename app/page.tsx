@@ -1,73 +1,42 @@
-'use client';
-
-import { useCallback, useState } from 'react';
 import Link from 'next/link';
-import { BarChart2, Settings } from 'lucide-react';
-import ConfigPanel from '@/components/ConfigPanel';
-import FifthsTrainer from '@/components/FifthsTrainer';
-import IntervalBuildTrainer from '@/components/IntervalBuildTrainer';
-import IntervalTrainer from '@/components/IntervalTrainer';
-import ModeSelector from '@/components/ModeSelector';
-import NotesTrainer from '@/components/NotesTrainer';
-import RelativesTrainer from '@/components/RelativesTrainer';
-import ScalesTrainer from '@/components/ScalesTrainer';
-import SheetTrainer from '@/components/SheetTrainer';
-import { useNoteStats } from '@/lib/storage';
-import { SessionPhase } from '@/lib/session';
-import { TrainingMode } from '@/lib/types';
+import AppHeader from '@/components/AppHeader';
+import { EXERCISE_GROUP_LABEL, EXERCISES, ExerciseGroup, exerciseHref } from '@/lib/exercises';
+
+const GROUPS: ExerciseGroup[] = ['reading', 'theory'];
 
 export default function HomePage() {
-  const { config, hydrated, updateConfig } = useNoteStats();
-  const [phase, setPhase] = useState<SessionPhase>('idle');
-  const [showConfig, setShowConfig] = useState(false);
-
-  const selectMode = useCallback(
-    (mode: TrainingMode) => updateConfig({ ...config, mode }),
-    [config, updateConfig]
-  );
-
-  if (!hydrated) {
-    return <div className="min-h-screen flex items-center justify-center text-zinc-400">Caricamento…</div>;
-  }
-
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col">
-      <header className="flex items-center justify-between px-4 py-3 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
-        <h1 className="text-lg font-black tracking-tight text-indigo-600">🎵 Note Coach</h1>
-        <div className="flex gap-2">
-          <Link href="/stats" className="p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
-            <BarChart2 size={20} />
-          </Link>
-          <button onClick={() => setShowConfig(true)} className="p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
-            <Settings size={20} />
-          </button>
-        </div>
-      </header>
+    <div className="min-h-dvh bg-zinc-50 dark:bg-zinc-950 flex flex-col">
+      <AppHeader />
 
-      <main className="flex-1 flex flex-col items-center justify-center px-4 py-6 gap-6 max-w-lg mx-auto w-full">
-        {phase === 'idle' && <ModeSelector mode={config.mode} onChange={selectMode} />}
-
-        {config.mode === 'fifths' ? (
-          <FifthsTrainer config={config} phase={phase} onPhaseChange={setPhase} />
-        ) : config.mode === 'scales' ? (
-          <ScalesTrainer config={config} phase={phase} onPhaseChange={setPhase} />
-        ) : config.mode === 'relatives' ? (
-          <RelativesTrainer config={config} phase={phase} onPhaseChange={setPhase} />
-        ) : config.mode === 'intervals' ? (
-          <IntervalTrainer config={config} phase={phase} onPhaseChange={setPhase} />
-        ) : config.mode === 'interval-build' ? (
-          <IntervalBuildTrainer config={config} phase={phase} onPhaseChange={setPhase} />
-        ) : config.sheet.enabled ? (
-          // Note reading, written out as a piece instead of one note at a time
-          <SheetTrainer config={config} phase={phase} onPhaseChange={setPhase} />
-        ) : (
-          <NotesTrainer config={config} phase={phase} onPhaseChange={setPhase} />
-        )}
+      <main className="flex-1 px-4 py-6 max-w-lg mx-auto w-full space-y-8">
+        {GROUPS.map((group) => (
+          <section key={group} aria-labelledby={`group-${group}`}>
+            <h2 id={`group-${group}`} className="text-sm font-semibold text-zinc-500 uppercase tracking-wide mb-3">
+              {EXERCISE_GROUP_LABEL[group]}
+            </h2>
+            <ul className="space-y-3">
+              {EXERCISES.filter((exercise) => exercise.group === group && !exercise.hidden).map((exercise) => (
+                <li key={exercise.mode}>
+                  <Link
+                    href={exerciseHref(exercise)}
+                    className="flex items-center gap-4 px-4 py-4 rounded-2xl border-2 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-indigo-400 dark:hover:border-indigo-700 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 transition-colors"
+                  >
+                    <span className="text-2xl leading-none font-serif text-indigo-600 w-14 text-center shrink-0 whitespace-nowrap" aria-hidden>
+                      {exercise.glyph}
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block font-bold text-zinc-800 dark:text-zinc-100">{exercise.title}</span>
+                      <span className="block text-sm leading-snug text-zinc-500">{exercise.summary}</span>
+                    </span>
+                    <span aria-hidden className="text-zinc-300 dark:text-zinc-600 text-xl">›</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
       </main>
-
-      {showConfig && (
-        <ConfigPanel config={config} onSave={updateConfig} onClose={() => setShowConfig(false)} isPlaying={phase === 'playing'} />
-      )}
     </div>
   );
 }

@@ -11,30 +11,24 @@ import {
   intervalBuildQuestionId,
   pickIntervalBuildQuestion,
 } from '@/lib/intervalBuild';
-import { displayIntervalName, QUALITY_SCOPE_LABEL } from '@/lib/intervals';
+import { displayIntervalName } from '@/lib/intervals';
 import { displaySpelledNoteName } from '@/lib/scales';
-import { CORRECT_FEEDBACK_DELAY_MS, FlashType, formatTime, SessionPhase, useSessionClock } from '@/lib/session';
-import { ExerciseConfig } from '@/lib/types';
+import { CORRECT_FEEDBACK_DELAY_MS, FlashType, SessionPhase, TrainerProps, useSessionClock, useStartOnMount } from '@/lib/session';
 
-interface IntervalBuildTrainerProps {
-  config: ExerciseConfig;
-  phase: SessionPhase;
-  onPhaseChange: (phase: SessionPhase) => void;
-}
-
-export default function IntervalBuildTrainer({ config, phase, onPhaseChange }: IntervalBuildTrainerProps) {
+export default function IntervalBuildTrainer({ config, onExit }: TrainerProps) {
+  const [phase, setPhase] = useState<SessionPhase>('playing');
   const [question, setQuestion] = useState<IntervalBuildQuestion | null>(null);
   const [flash, setFlash] = useState<FlashType>(null);
   const [wrongAnswerId, setWrongAnswerId] = useState<string | null>(null);
   const [sessionCorrect, setSessionCorrect] = useState(0);
   const [sessionTotal, setSessionTotal] = useState(0);
 
-  const expire = useCallback(() => onPhaseChange('finished'), [onPhaseChange]);
-  const { timeLeft, start: startClock, stop: stopClock } = useSessionClock(config.durationSeconds, expire);
+  const expire = useCallback(() => setPhase('finished'), []);
+  const { timeLeft, start: startClock, stop: stopClock } = useSessionClock(config.intervalBuild.durationSeconds, expire);
   const finish = useCallback(() => {
     stopClock();
-    onPhaseChange('finished');
-  }, [stopClock, onPhaseChange]);
+    setPhase('finished');
+  }, [stopClock]);
 
   const { enabledRoots, enabledDegrees, qualityScope } = config.intervalBuild;
   const candidates = useMemo(
@@ -52,10 +46,12 @@ export default function IntervalBuildTrainer({ config, phase, onPhaseChange }: I
   const startSession = useCallback(() => {
     setSessionCorrect(0);
     setSessionTotal(0);
-    onPhaseChange('playing');
+    setPhase('playing');
     startClock();
     nextQuestion(undefined);
-  }, [nextQuestion, onPhaseChange, startClock]);
+  }, [nextQuestion, startClock]);
+
+  useStartOnMount(startSession);
 
   const handleAnswer = useCallback((answerId: string) => {
     if (!question || phase !== 'playing') return;
@@ -73,35 +69,13 @@ export default function IntervalBuildTrainer({ config, phase, onPhaseChange }: I
     }
   }, [question, phase, nextQuestion]);
 
-  if (phase === 'idle') {
-    return (
-      <div className="flex flex-col items-center gap-6 w-full">
-        <div className="text-center space-y-1">
-          <p className="text-zinc-500 text-sm">{QUALITY_SCOPE_LABEL[qualityScope]}</p>
-          <p className="text-zinc-400 text-sm">
-            {config.durationSeconds === 0 ? 'Tempo illimitato' : formatTime(config.durationSeconds)}
-            {' · '}{enabledDegrees.length} gradi
-            {' · '}{candidates.length} intervalli
-          </p>
-        </div>
-        <button
-          onClick={startSession}
-          disabled={candidates.length === 0}
-          className="w-full max-w-xs py-4 bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:opacity-50 disabled:active:scale-100 text-white text-xl font-black rounded-2xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
-        >
-          Inizia
-        </button>
-      </div>
-    );
-  }
-
   if (phase === 'finished') {
     return (
       <SessionSummary
         correct={sessionCorrect}
         total={sessionTotal}
         onRestart={startSession}
-        onHome={() => onPhaseChange('idle')}
+        onSettings={onExit}
       />
     );
   }
@@ -114,7 +88,7 @@ export default function IntervalBuildTrainer({ config, phase, onPhaseChange }: I
         correct={sessionCorrect}
         total={sessionTotal}
         timeLeft={timeLeft}
-        showTimer={config.durationSeconds > 0}
+        showTimer={config.intervalBuild.durationSeconds > 0}
         onStop={finish}
       />
 

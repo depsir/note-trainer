@@ -14,7 +14,8 @@ const LETTER_ORDER = ['C', 'D', 'E', 'F', 'G', 'A', 'B'] as const;
 
 export default function NoteButtons({ onSelect, disabled, lastAnswer, nameSystem }: NoteButtonsProps) {
   return (
-    <div className="grid grid-cols-4 gap-3 w-full max-w-sm mx-auto">
+    // All seven in a row where there is room, as on a keyboard
+    <div className="grid grid-cols-4 sm:grid-cols-7 gap-3 sm:gap-2 w-full max-w-sm sm:max-w-lg mx-auto">
       {LETTER_ORDER.map((letter) => {
         const isWrong = lastAnswer && !lastAnswer.correct && lastAnswer.letter === letter;
         return (

@@ -2,7 +2,23 @@ export type Clef = 'treble' | 'bass';
 
 export type NoteNameSystem = 'italian' | 'english';
 
-export type TrainingMode = 'notes' | 'fifths' | 'relatives' | 'intervals' | 'interval-build' | 'scales';
+/**
+ * `notes` and `play` read a written piece through, answered by name or on the instrument;
+ * their `-challenge` twins read against the clock, as many notes as there is time for.
+ */
+export type TrainingMode =
+  | 'notes'
+  | 'play'
+  | 'notes-challenge'
+  | 'play-challenge'
+  | 'fifths'
+  | 'relatives'
+  | 'intervals'
+  | 'interval-build'
+  | 'scales';
+
+/** The note-reading exercises, which all draw from a pool of notes on the staff */
+export type NoteDrillMode = Extract<TrainingMode, 'notes' | 'play' | 'notes-challenge' | 'play-challenge'>;
 
 export type AccidentalType = 'none' | 'sharp' | 'flat';
 
@@ -69,30 +85,62 @@ export interface NoteStats {
 
 export type AllNoteStats = Record<string, NoteStats>;
 
-export interface FifthsConfig {
+/** What every exercise has: how long a session lasts. */
+interface TimedConfig {
+  /** Duration in seconds; 0 = no clock */
+  durationSeconds: number;
+}
+
+/** Which notes a note-reading exercise draws from */
+export interface NotePoolConfig {
+  /** Which clefs to include */
+  clefs: Clef[];
+  /** Note vexKeys to include (subset of all available) */
+  enabledNotes: string[];
+  /** How many ledger lines above and below the staff the note picker reaches, 1 to MAX_LEDGER_LINES */
+  ledgerLines: number;
+}
+
+/** Reading one written piece through, with no clock */
+export interface SheetReadingConfig extends NotePoolConfig {
+  /** How many 4/4 bars the piece spans */
+  measures: number;
+}
+
+/** Reading as many notes as there is time for */
+export interface NoteChallengeConfig extends NotePoolConfig, TimedConfig {
+  /** Notes on screen at once: a single note, or a bar or two of a written piece */
+  notesAtOnce: number;
+}
+
+export interface FifthsConfig extends TimedConfig {
   /** Which question kinds to ask */
   questionKinds: FifthsQuestionKind[];
   /** Major key ids to include (subset of MAJOR_KEYS) */
   enabledKeys: string[];
+  /** Clefs the key signatures are drawn in */
+  clefs: Clef[];
 }
 
-export interface RelativesConfig {
+export interface RelativesConfig extends TimedConfig {
   /** Which directions to ask */
   questionKinds: RelativeQuestionKind[];
   /** Relative pair ids to include — the ids are those of the major keys */
   enabledKeys: string[];
 }
 
-export interface IntervalsConfig {
+export interface IntervalsConfig extends TimedConfig {
   /** Interval numbers to include (subset of 2-8) */
   enabledDegrees: number[];
   /** How the question is displayed */
   presentation: IntervalPresentation;
   /** Whether minor/diminished/augmented qualities are asked too */
   qualityScope: IntervalQualityScope;
+  /** Clefs the two notes are drawn in, when shown on the staff */
+  clefs: Clef[];
 }
 
-export interface IntervalBuildConfig {
+export interface IntervalBuildConfig extends TimedConfig {
   /** Interval numbers to include (subset of BUILD_DEGREES) */
   enabledDegrees: number[];
   /** Whether minor/diminished/augmented qualities are asked too */
@@ -102,8 +150,6 @@ export interface IntervalBuildConfig {
 }
 
 export interface AudioInputConfig {
-  /** Answer by playing the note, alongside the buttons */
-  enabled: boolean;
   /** Which instrument is being played; decides how written notes are transposed */
   instrument: InstrumentId;
   /** Chosen input device; empty means the system default */
@@ -114,35 +160,28 @@ export interface AudioInputConfig {
   strictOctave: boolean;
 }
 
-export interface SheetConfig {
-  /** Read a written piece of several bars instead of one note at a time */
-  enabled: boolean;
-  /** How many 4/4 bars the piece spans */
-  measures: number;
-}
-
-export interface ScalesConfig {
+export interface ScalesConfig extends TimedConfig {
   /** Which scale shapes to ask */
   enabledTypes: ScaleType[];
   /** Tonic ids to include (subset of ALL_TONIC_IDS) */
   enabledTonics: string[];
 }
 
+/**
+ * Everything the app remembers between visits. Each exercise keeps its own section, so
+ * setting up one never changes another; only the note names and the instrument are shared.
+ */
 export interface ExerciseConfig {
-  /** Which exercise the trainer runs */
-  mode: TrainingMode;
-  /** Duration in seconds; 0 = unlimited */
-  durationSeconds: number;
-  /** Which clefs to include */
-  clefs: Clef[];
-  /** Note vexKeys to include (subset of all available) */
-  enabledNotes: string[];
-  /** How many ledger lines above and below the staff the note picker reaches, 1 to MAX_LEDGER_LINES */
-  ledgerLines: number;
-  /** Use adaptive weighting */
-  useAdaptive: boolean;
   /** Note name display system */
   nameSystem: NoteNameSystem;
+  /** Reading a piece and answering by name */
+  notes: SheetReadingConfig;
+  /** Reading a piece and answering on the instrument */
+  play: SheetReadingConfig;
+  /** Reading against the clock and answering by name */
+  notesChallenge: NoteChallengeConfig;
+  /** Reading against the clock and answering on the instrument */
+  playChallenge: NoteChallengeConfig;
   /** Circle-of-fifths mode settings */
   fifths: FifthsConfig;
   /** Relative major/minor mode settings */
@@ -153,9 +192,7 @@ export interface ExerciseConfig {
   intervalBuild: IntervalBuildConfig;
   /** Scale training mode settings */
   scales: ScalesConfig;
-  /** Sheet-reading settings for the note-reading mode */
-  sheet: SheetConfig;
-  /** Guitar / microphone input settings */
+  /** Instrument / microphone input settings, used by the exercises answered on the instrument */
   audio: AudioInputConfig;
 }
 

@@ -20,6 +20,8 @@ interface SheetStaffDisplayProps {
   fumbled: boolean[];
   /** Wrong tries on the note being read; drives the miss animation, so it has to keep climbing */
   wrongAttempts: number;
+  /** Height the score may take, in CSS pixels; a page shows as many rows as fit in it */
+  maxHeight?: number;
 }
 
 /** Everything below is in VexFlow's own units; the whole drawing is scaled up once at the end. */
@@ -46,6 +48,17 @@ const MEASURE_WIDTH = NOTE_WIDTH * BEATS_PER_MEASURE;
 /** Extra room the first bar needs for the clef and the time signature */
 const FIRST_MEASURE_EXTRA = 70;
 const EDGE_PADDING = 10;
+
+/**
+ * Once this many bars fit across, the piece is written as a page — rows one under the
+ * other, read ahead like real music — instead of one line sliding past. A phone fits one
+ * bar at most, so it keeps the sliding line.
+ */
+const MIN_BARS_PER_ROW = 3;
+/** Room between one row's lowest reach and the next row's highest */
+const ROW_GAP = 12;
+/** Rows on show at once when no height is given; a longer page scrolls itself down as it is read */
+const VISIBLE_ROWS = 3;
 
 /**
  * Where the note being read comes to rest in the viewport, as a fraction of its width.
@@ -126,11 +139,13 @@ function measureStaff(stave: Stave, clef: Clef, range: Note[], vexflow: VexFlowM
  * keep their own coordinates, so sliding the view box onto the music and shrinking the
  * element to match costs nothing: neither the drawing nor the sideways scroll moves.
  *
+ * A page of several rows keeps the same margin above its first row and below its last.
+ *
  * Returns the cropped height in CSS pixels.
  */
-function cropToReach(svg: SVGSVGElement, reach: Reach, width: number): number {
+function cropToReach(svg: SVGSVGElement, reach: Reach, width: number, rows: number, pitch: number): number {
   const top = reach.top - VERTICAL_PADDING;
-  const height = reach.bottom - reach.top + VERTICAL_PADDING * 2;
+  const height = reach.bottom - reach.top + (rows - 1) * pitch + VERTICAL_PADDING * 2;
   const pixels = Math.round(height * SCALE);
 
   svg.setAttribute('viewBox', `0 ${top} ${width} ${height}`);
@@ -139,26 +154,59 @@ function cropToReach(svg: SVGSVGElement, reach: Reach, width: number): number {
   return pixels;
 }
 
+/** How many bars fit across this many CSS pixels, with the clef and time signature in front. */
+function barsAcross(pixels: number): number {
+  return Math.floor((pixels / SCALE - EDGE_PADDING * 2 - FIRST_MEASURE_EXTRA) / MEASURE_WIDTH);
+}
+
 /**
- * The piece as one long staff that scrolls itself as it is read.
+ * The piece as one long staff that scrolls itself as it is read — or, with room for it,
+ * as a page of rows that scrolls down a row at a time.
  *
  * It is drawn once per piece and then only recoloured: a redraw would wipe the SVG and
  * with it the scroll position, which is the one thing that has to stay continuous here.
  * Note state therefore rides on CSS classes (see `globals.css`), which outrank the
  * presentation attributes VexFlow writes onto its own paths.
  */
-export default function SheetStaffDisplay({ notes, clef, range, currentIndex, fumbled, wrongAttempts }: SheetStaffDisplayProps) {
+export default function SheetStaffDisplay({ notes, clef, range, currentIndex, fumbled, wrongAttempts, maxHeight }: SheetStaffDisplayProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const staffRef = useRef<HTMLDivElement>(null);
   const noteElementsRef = useRef<SVGElement[]>([]);
   const [drawnAt, setDrawnAt] = useState(0);
   const [height, setHeight] = useState(PLACEHOLDER_HEIGHT);
+  /** Height of one row of the page, in CSS pixels; 0 while the piece is a single line */
+  const [rowPixels, setRowPixels] = useState(0);
+  const [boxWidth, setBoxWidth] = useState(0);
   const isDark = usePrefersDark();
   const reducedMotion = usePrefersReducedMotion();
 
+  const measureCount = Math.ceil(notes.length / BEATS_PER_MEASURE);
+  const across = barsAcross(boxWidth);
+  /** Bars per row of the page, or 0 for the single sliding line */
+  const perRow = across >= MIN_BARS_PER_ROW ? Math.min(across, measureCount) : 0;
+  const measured = boxWidth > 0;
+  // Only a page is drawn to the width it has; a line is redrawn only when that changes.
+  const pageWidth = perRow > 0 ? boxWidth : 0;
+
+  // A whole number of rows and their margin, so that scrolled to the end the last ones sit flush too.
+  const rowsHeight = (rows: number) => rowPixels * rows + (VERTICAL_PADDING * 2 - ROW_GAP) * SCALE;
+  const visibleRows =
+    maxHeight === undefined || rowPixels === 0
+      ? VISIBLE_ROWS
+      : Math.max(1, Math.floor((maxHeight - rowsHeight(0)) / rowPixels));
+
+  useEffect(() => {
+    const box = scrollRef.current;
+    if (!box) return;
+    const observer = new ResizeObserver(([entry]) => setBoxWidth(entry.contentRect.width));
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     const element = staffRef.current;
-    if (!element) return;
+    // Until the box has been measured there is no telling a line from a page.
+    if (!element || !measured) return;
 
     let cancelled = false;
     noteElementsRef.current = [];
@@ -170,11 +218,16 @@ export default function SheetStaffDisplay({ notes, clef, range, currentIndex, fu
       const container = staffRef.current;
       container.innerHTML = '';
 
-      const measures = Math.ceil(notes.length / BEATS_PER_MEASURE);
-      const totalWidth = EDGE_PADDING * 2 + FIRST_MEASURE_EXTRA + MEASURE_WIDTH * measures;
+      const measures = measureCount;
+      const wrap = perRow > 0;
+      const rows = wrap ? Math.ceil(measures / perRow) : 1;
+      const barsPerRow = wrap ? perRow : measures;
+      // A page stretches its bars to fill the width it has; a line keeps them at their natural size.
+      const measureWidth = wrap ? (pageWidth / SCALE - EDGE_PADDING * 2 - FIRST_MEASURE_EXTRA) / perRow : MEASURE_WIDTH;
+      const totalWidth = EDGE_PADDING * 2 + FIRST_MEASURE_EXTRA + measureWidth * barsPerRow;
 
       const renderer = new Renderer(container, Renderer.Backends.SVG);
-      renderer.resize(Math.round(totalWidth * SCALE), Math.round(CANVAS_HEIGHT * SCALE));
+      renderer.resize(Math.round(totalWidth * SCALE), Math.round(CANVAS_HEIGHT * rows * SCALE));
 
       const context = renderer.getContext();
       context.scale(SCALE, SCALE);
@@ -186,18 +239,24 @@ export default function SheetStaffDisplay({ notes, clef, range, currentIndex, fu
 
       const drawn: SVGElement[] = [];
       let extent: Reach | null = null;
+      let pitch = 0;
       let x = EDGE_PADDING;
 
       for (let measure = 0; measure < measures; measure++) {
         const isFirst = measure === 0;
-        const width = MEASURE_WIDTH + (isFirst ? FIRST_MEASURE_EXTRA : 0);
-        const stave = new Stave(x, STAFF_TOP, width);
+        const rowStart = measure % barsPerRow === 0;
+        const row = Math.floor(measure / barsPerRow);
+        if (rowStart) x = EDGE_PADDING;
+        // Every row starts with the clef, so they all share the first bar's extra width
+        // and the barlines line up from one row to the next.
+        const width = measureWidth + (rowStart ? FIRST_MEASURE_EXTRA : 0);
+        const stave = new Stave(x, STAFF_TOP + row * pitch, width);
 
-        if (isFirst) {
+        if (rowStart) {
           stave.addClef(clef);
-          stave.addTimeSignature(`${BEATS_PER_MEASURE}/4`);
+          if (isFirst) stave.addTimeSignature(`${BEATS_PER_MEASURE}/4`);
         } else {
-          // Every bar but the first already has the previous bar's line to its left.
+          // Every bar but the first of a row already has the previous bar's line to its left.
           stave.setBegBarType(Barline.type.NONE);
         }
         if (measure === measures - 1) stave.setEndBarType(Barline.type.END);
@@ -214,7 +273,10 @@ export default function SheetStaffDisplay({ notes, clef, range, currentIndex, fu
 
         // Every bar sits at the same height, so the first settles the box for all of them.
         // It has to be measured once drawn: until then the clef does not know where it is.
-        if (isFirst) extent = measureStaff(stave, clef, range, vexflow);
+        if (isFirst) {
+          extent = measureStaff(stave, clef, range, vexflow);
+          pitch = extent.bottom - extent.top + ROW_GAP;
+        }
 
         staveNotes.forEach((staveNote) => {
           const group = staveNote.getSVGElement();
@@ -228,7 +290,8 @@ export default function SheetStaffDisplay({ notes, clef, range, currentIndex, fu
 
       noteElementsRef.current = drawn;
       const svg = container.querySelector('svg');
-      if (svg && extent) setHeight(cropToReach(svg, extent, totalWidth));
+      if (svg && extent) setHeight(cropToReach(svg, extent, totalWidth, rows, pitch));
+      setRowPixels(wrap ? pitch * SCALE : 0);
       // Colouring and scrolling both hang off the elements this pass produced.
       setDrawnAt((count) => count + 1);
     });
@@ -238,7 +301,7 @@ export default function SheetStaffDisplay({ notes, clef, range, currentIndex, fu
       noteElementsRef.current = [];
       element.innerHTML = '';
     };
-  }, [notes, clef, range, isDark]);
+  }, [notes, clef, range, isDark, measured, measureCount, perRow, pageWidth]);
 
   useEffect(() => {
     noteElementsRef.current.forEach((group, index) => {
@@ -264,16 +327,28 @@ export default function SheetStaffDisplay({ notes, clef, range, currentIndex, fu
     const target = noteElementsRef.current[currentIndex];
     if (!scroller || !target) return;
 
+    const behavior = reducedMotion ? 'auto' : 'smooth';
+    if (rowPixels > 0) {
+      // A page brings the row being read to the top, leaving the rows after it in view.
+      const row = Math.floor(currentIndex / (perRow * BEATS_PER_MEASURE));
+      scroller.scrollTo({ top: row * rowPixels, behavior });
+      return;
+    }
+
     const noteBox = target.getBoundingClientRect();
     const viewBox = scroller.getBoundingClientRect();
     const offset = noteBox.left + noteBox.width / 2 - viewBox.left - viewBox.width * READING_POSITION;
-    scroller.scrollTo({ left: scroller.scrollLeft + offset, behavior: reducedMotion ? 'auto' : 'smooth' });
-  }, [currentIndex, drawnAt, reducedMotion]);
+    scroller.scrollTo({ left: scroller.scrollLeft + offset, behavior });
+  }, [currentIndex, drawnAt, reducedMotion, rowPixels, perRow]);
 
   return (
     <div
       ref={scrollRef}
-      className="sheet-score w-full overflow-x-auto overflow-y-hidden overscroll-x-contain"
+      className={[
+        'sheet-score w-full',
+        rowPixels > 0 ? 'overflow-y-auto overflow-x-hidden overscroll-y-contain' : 'overflow-x-auto overflow-y-hidden overscroll-x-contain',
+      ].join(' ')}
+      style={rowPixels > 0 ? { maxHeight: Math.min(height, rowsHeight(visibleRows)) } : undefined}
       aria-hidden
     >
       <div ref={staffRef} style={{ height }} />

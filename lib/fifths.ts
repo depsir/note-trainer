@@ -162,10 +162,6 @@ export const QUESTION_KIND_LABEL: Record<FifthsQuestionKind, string> = {
   'key-to-count': 'Tonalità → alterazioni',
 };
 
-export const QUESTION_KIND_HINT: Record<FifthsQuestionKind, string> = {
-  'signature-to-key': 'Vedi l’armatura e scegli la tonalità',
-  'key-to-count': 'Leggi la tonalità e conta le alterazioni',
-};
 
 /** Key ids whose signature uses one of `types` (C major always joins, it has none). */
 export function keyIdsForTypes(types: Exclude<AccidentalType, 'none'>[]): string[] {

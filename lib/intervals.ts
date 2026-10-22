@@ -283,7 +283,3 @@ export const QUALITY_SCOPE_LABEL: Record<IntervalQualityScope, string> = {
   all: 'Tutte le qualità',
 };
 
-export const QUALITY_SCOPE_HINT: Record<IntervalQualityScope, string> = {
-  default: 'Una sola risposta per grado',
-  all: 'Anche minori, diminuiti e aumentati',
-};

@@ -11,18 +11,21 @@ import { ALL_NOTES, noteId } from '@/lib/notes';
 import { getInstrument, heardMatches, writtenPitch } from '@/lib/instruments';
 import { HeardNote, useAudioInput } from '@/lib/audioInput';
 import { pickNote, updateWeight, initStats } from '@/lib/adaptive';
-import { CORRECT_FEEDBACK_DELAY_MS, FlashType, formatTime, SessionPhase, useSessionClock } from '@/lib/session';
+import {
+  CORRECT_FEEDBACK_DELAY_MS,
+  FlashType,
+  NoteTrainerProps,
+  SessionPhase,
+  useSessionClock,
+  useStartOnMount,
+} from '@/lib/session';
 import { useWakeLock } from '@/lib/wakeLock';
-import { ExerciseConfig, Note } from '@/lib/types';
+import { Note } from '@/lib/types';
 
-interface NotesTrainerProps {
-  config: ExerciseConfig;
-  phase: SessionPhase;
-  onPhaseChange: (phase: SessionPhase) => void;
-}
-
-export default function NotesTrainer({ config, phase, onPhaseChange }: NotesTrainerProps) {
+/** One note at a time on the staff, named or played until the clock runs out. */
+export default function NotesTrainer({ drill, config, onExit }: NoteTrainerProps) {
   const { stats, updateStats } = useNoteStats();
+  const [phase, setPhase] = useState<SessionPhase>('playing');
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [flash, setFlash] = useState<FlashType>(null);
   const [lastAnswer, setLastAnswer] = useState<{ letter: string; correct: boolean } | null>(null);
@@ -35,40 +38,45 @@ export default function NotesTrainer({ config, phase, onPhaseChange }: NotesTrai
 
   useEffect(() => { statsRef.current = stats; }, [stats]);
 
-  const expire = useCallback(() => onPhaseChange('finished'), [onPhaseChange]);
-  const { timeLeft, start: startClock, stop: stopClock } = useSessionClock(config.durationSeconds, expire);
+  const listening = drill.listening;
+
+  const expire = useCallback(() => setPhase('finished'), []);
+  const { timeLeft, start: startClock, stop: stopClock } = useSessionClock(drill.durationSeconds, expire);
   const finish = useCallback(() => {
     stopClock();
-    onPhaseChange('finished');
-  }, [stopClock, onPhaseChange]);
+    setPhase('finished');
+  }, [stopClock]);
 
   const instrument = getInstrument(config.audio.instrument);
 
   const candidates = useMemo(
-    () => ALL_NOTES.filter((n) => config.enabledNotes.includes(noteId(n))),
-    [config.enabledNotes]
+    () => ALL_NOTES.filter((n) => drill.clefs.includes(n.clef) && drill.enabledNotes.includes(noteId(n))),
+    [drill.clefs, drill.enabledNotes]
   );
 
   const nextNote = useCallback((currentStats = statsRef.current) => {
     if (candidates.length === 0) return;
-    const note = pickNote(candidates, currentStats, config.useAdaptive, lastNoteIdRef.current);
+    // Adaptive picking is on hold while it is reworked: every enabled note is as likely as the next.
+    const note = pickNote(candidates, currentStats, false, lastNoteIdRef.current);
     lastNoteIdRef.current = noteId(note);
     setCurrentNote(note);
     noteShownAtRef.current = Date.now();
     setFlash(null);
     setLastAnswer(null);
     setLastHeard(null);
-  }, [candidates, config.useAdaptive]);
+  }, [candidates]);
 
   const startSession = useCallback(() => {
     const newStats = initStats(candidates.map((n) => noteId(n)), statsRef.current);
     updateStats(newStats);
     setSessionCorrect(0);
     setSessionTotal(0);
-    onPhaseChange('playing');
+    setPhase('playing');
     startClock();
     nextNote(newStats);
-  }, [candidates, nextNote, onPhaseChange, startClock, updateStats]);
+  }, [candidates, nextNote, startClock, updateStats]);
+
+  useStartOnMount(startSession);
 
   const registerAnswer = useCallback((correct: boolean, buttonLetter: string | null) => {
     if (!currentNote || phase !== 'playing') return;
@@ -107,7 +115,7 @@ export default function NotesTrainer({ config, phase, onPhaseChange }: NotesTrai
   );
 
   const audio = useAudioInput({
-    enabled: config.audio.enabled && phase === 'playing',
+    enabled: listening && phase === 'playing',
     deviceId: config.audio.deviceId,
     a4: config.audio.a4,
     instrument: config.audio.instrument,
@@ -126,37 +134,16 @@ export default function NotesTrainer({ config, phase, onPhaseChange }: NotesTrai
         correct={sessionCorrect}
         total={sessionTotal}
         onRestart={startSession}
-        onHome={() => onPhaseChange('idle')}
-        showStatsLink
+        onSettings={onExit}
+        score={`${sessionCorrect} note`}
       />
     );
   }
 
-  // Turning the sheet setting off mid-session swaps this component in while already
-  // playing, with nothing on the staff yet: that lands back on the start screen.
-  if (phase === 'idle' || !currentNote) {
-    return (
-      <div className="flex flex-col items-center gap-6 w-full">
-        <div className="text-center space-y-1">
-          <p className="text-zinc-500 text-sm">
-            {config.clefs.map((c) => (c === 'treble' ? 'Chiave di Violino' : 'Chiave di Basso')).join(' · ')}
-          </p>
-          <p className="text-zinc-400 text-sm">
-            {config.durationSeconds === 0 ? 'Tempo illimitato' : formatTime(config.durationSeconds)}
-            {' · '}{config.useAdaptive ? 'Adattivo' : 'Casuale'}
-            {' · '}{config.nameSystem === 'italian' ? 'Do Re Mi' : 'C D E'}
-            {config.audio.enabled ? ` · ${instrument.icon} ${instrument.label}` : ''}
-          </p>
-        </div>
-        <button
-          onClick={startSession}
-          className="w-full max-w-xs py-4 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xl font-black rounded-2xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
-        >
-          Inizia
-        </button>
-      </div>
-    );
-  }
+  if (!currentNote) return null;
+
+  // Playing is the answer; the buttons only stand in when the microphone cannot.
+  const showButtons = !listening || ['denied', 'unsupported', 'error'].includes(audio.status);
 
   return (
     <>
@@ -164,8 +151,9 @@ export default function NotesTrainer({ config, phase, onPhaseChange }: NotesTrai
         correct={sessionCorrect}
         total={sessionTotal}
         timeLeft={timeLeft}
-        showTimer={config.durationSeconds > 0}
+        showTimer={drill.durationSeconds > 0}
         onStop={finish}
+        scoreLabel={`${sessionCorrect} note lette`}
       />
 
       <div className="relative w-full bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm border border-zinc-200 dark:border-zinc-800">
@@ -196,12 +184,14 @@ export default function NotesTrainer({ config, phase, onPhaseChange }: NotesTrai
         strictOctave={config.audio.strictOctave}
       />
 
-      <NoteButtons
-        onSelect={handleAnswer}
-        disabled={flash === 'correct'}
-        lastAnswer={lastAnswer}
-        nameSystem={config.nameSystem}
-      />
+      {showButtons && (
+        <NoteButtons
+          onSelect={handleAnswer}
+          disabled={flash === 'correct'}
+          lastAnswer={lastAnswer}
+          nameSystem={config.nameSystem}
+        />
+      )}
     </>
   );
 }

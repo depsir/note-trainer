@@ -10,7 +10,6 @@ import {
   pickScaleQuestion,
   SCALE_DEGREES,
   SCALE_TYPE_CAPTION,
-  SCALE_TYPE_LABEL,
   scaleCandidates,
   scaleKeypadColumns,
   ScaleQuestion,
@@ -18,16 +17,10 @@ import {
   SpelledNote,
   spelledNoteId,
 } from '@/lib/scales';
-import { formatTime, SEQUENCE_FEEDBACK_DELAY_MS, SessionPhase, useSessionClock } from '@/lib/session';
-import { ExerciseConfig } from '@/lib/types';
+import { SEQUENCE_FEEDBACK_DELAY_MS, SessionPhase, TrainerProps, useSessionClock, useStartOnMount } from '@/lib/session';
 
-interface ScalesTrainerProps {
-  config: ExerciseConfig;
-  phase: SessionPhase;
-  onPhaseChange: (phase: SessionPhase) => void;
-}
-
-export default function ScalesTrainer({ config, phase, onPhaseChange }: ScalesTrainerProps) {
+export default function ScalesTrainer({ config, onExit }: TrainerProps) {
+  const [phase, setPhase] = useState<SessionPhase>('playing');
   const [question, setQuestion] = useState<ScaleQuestion | null>(null);
   const [entered, setEntered] = useState<SpelledNote[]>([]);
   const [wrongNoteId, setWrongNoteId] = useState<string | null>(null);
@@ -38,12 +31,12 @@ export default function ScalesTrainer({ config, phase, onPhaseChange }: ScalesTr
   // Per-question, not per-tap: a scale only counts as perfect if it took no wrong note at all
   const missedRef = useRef(false);
 
-  const expire = useCallback(() => onPhaseChange('finished'), [onPhaseChange]);
-  const { timeLeft, start: startClock, stop: stopClock } = useSessionClock(config.durationSeconds, expire);
+  const expire = useCallback(() => setPhase('finished'), []);
+  const { timeLeft, start: startClock, stop: stopClock } = useSessionClock(config.scales.durationSeconds, expire);
   const finish = useCallback(() => {
     stopClock();
-    onPhaseChange('finished');
-  }, [stopClock, onPhaseChange]);
+    setPhase('finished');
+  }, [stopClock]);
 
   const candidates = useMemo(
     () => scaleCandidates(config.scales.enabledTonics, config.scales.enabledTypes),
@@ -63,10 +56,12 @@ export default function ScalesTrainer({ config, phase, onPhaseChange }: ScalesTr
     setSessionTotal(0);
     setScalesDone(0);
     setScalesPerfect(0);
-    onPhaseChange('playing');
+    setPhase('playing');
     startClock();
     nextQuestion(undefined);
-  }, [nextQuestion, onPhaseChange, startClock]);
+  }, [nextQuestion, startClock]);
+
+  useStartOnMount(startSession);
 
   const complete = entered.length === SCALE_DEGREES;
 
@@ -96,36 +91,13 @@ export default function ScalesTrainer({ config, phase, onPhaseChange }: ScalesTr
     }
   }, [question, phase, entered, nextQuestion]);
 
-  if (phase === 'idle') {
-    const typeSummary = config.scales.enabledTypes.map((type) => SCALE_TYPE_LABEL[type]).join(' · ');
-    return (
-      <div className="flex flex-col items-center gap-6 w-full">
-        <div className="text-center space-y-1">
-          <p className="text-zinc-500 text-sm">{typeSummary || 'Nessun tipo di scala selezionato'}</p>
-          <p className="text-zinc-400 text-sm">
-            {config.durationSeconds === 0 ? 'Tempo illimitato' : formatTime(config.durationSeconds)}
-            {' · '}{candidates.length} scale
-            {' · '}{config.nameSystem === 'italian' ? 'Do Re Mi' : 'C D E'}
-          </p>
-        </div>
-        <button
-          onClick={startSession}
-          disabled={candidates.length === 0}
-          className="w-full max-w-xs py-4 bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:opacity-50 disabled:active:scale-100 text-white text-xl font-black rounded-2xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
-        >
-          Inizia
-        </button>
-      </div>
-    );
-  }
-
   if (phase === 'finished') {
     return (
       <SessionSummary
         correct={sessionCorrect}
         total={sessionTotal}
         onRestart={startSession}
-        onHome={() => onPhaseChange('idle')}
+        onSettings={onExit}
         detail={scalesDone > 0 ? `${scalesPerfect} scale su ${scalesDone} senza errori` : undefined}
       />
     );
@@ -139,7 +111,7 @@ export default function ScalesTrainer({ config, phase, onPhaseChange }: ScalesTr
         correct={sessionCorrect}
         total={sessionTotal}
         timeLeft={timeLeft}
-        showTimer={config.durationSeconds > 0}
+        showTimer={config.scales.durationSeconds > 0}
         onStop={finish}
       />
 

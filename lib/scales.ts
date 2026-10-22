@@ -144,12 +144,6 @@ export const SCALE_TYPE_LABEL: Record<ScaleType, string> = {
   'minor-melodic': 'Minore melodica',
 };
 
-export const SCALE_TYPE_HINT: Record<ScaleType, string> = {
-  major: 'Tutti i gradi naturali rispetto alla tonica',
-  'minor-natural': '3ª, 6ª e 7ª abbassate',
-  'minor-harmonic': 'Come la naturale, ma 7ª alzata',
-  'minor-melodic': 'Ascendente: 6ª e 7ª alzate',
-};
 
 /** Caption under the tonic in the question card, e.g. "minore armonica". */
 export const SCALE_TYPE_CAPTION: Record<ScaleType, string> = {

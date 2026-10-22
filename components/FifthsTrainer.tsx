@@ -15,30 +15,23 @@ import {
   pickQuestion,
   questionAnswerId,
   questionId,
-  QUESTION_KIND_LABEL,
 } from '@/lib/fifths';
-import { CORRECT_FEEDBACK_DELAY_MS, FlashType, formatTime, SessionPhase, useSessionClock } from '@/lib/session';
-import { ExerciseConfig } from '@/lib/types';
+import { CORRECT_FEEDBACK_DELAY_MS, FlashType, SessionPhase, TrainerProps, useSessionClock, useStartOnMount } from '@/lib/session';
 
-interface FifthsTrainerProps {
-  config: ExerciseConfig;
-  phase: SessionPhase;
-  onPhaseChange: (phase: SessionPhase) => void;
-}
-
-export default function FifthsTrainer({ config, phase, onPhaseChange }: FifthsTrainerProps) {
+export default function FifthsTrainer({ config, onExit }: TrainerProps) {
+  const [phase, setPhase] = useState<SessionPhase>('playing');
   const [question, setQuestion] = useState<FifthsQuestion | null>(null);
   const [flash, setFlash] = useState<FlashType>(null);
   const [wrongAnswerId, setWrongAnswerId] = useState<string | null>(null);
   const [sessionCorrect, setSessionCorrect] = useState(0);
   const [sessionTotal, setSessionTotal] = useState(0);
 
-  const expire = useCallback(() => onPhaseChange('finished'), [onPhaseChange]);
-  const { timeLeft, start: startClock, stop: stopClock } = useSessionClock(config.durationSeconds, expire);
+  const expire = useCallback(() => setPhase('finished'), []);
+  const { timeLeft, start: startClock, stop: stopClock } = useSessionClock(config.fifths.durationSeconds, expire);
   const finish = useCallback(() => {
     stopClock();
-    onPhaseChange('finished');
-  }, [stopClock, onPhaseChange]);
+    setPhase('finished');
+  }, [stopClock]);
 
   const keys = useMemo(
     () => MAJOR_KEYS.filter((key) => config.fifths.enabledKeys.includes(key.id)),
@@ -49,18 +42,20 @@ export default function FifthsTrainer({ config, phase, onPhaseChange }: FifthsTr
 
   const nextQuestion = useCallback((previousId?: string) => {
     if (keys.length === 0 || config.fifths.questionKinds.length === 0) return;
-    setQuestion(pickQuestion(keys, config.fifths.questionKinds, config.clefs, previousId));
+    setQuestion(pickQuestion(keys, config.fifths.questionKinds, config.fifths.clefs, previousId));
     setFlash(null);
     setWrongAnswerId(null);
-  }, [keys, config.fifths.questionKinds, config.clefs]);
+  }, [keys, config.fifths.questionKinds, config.fifths.clefs]);
 
   const startSession = useCallback(() => {
     setSessionCorrect(0);
     setSessionTotal(0);
-    onPhaseChange('playing');
+    setPhase('playing');
     startClock();
     nextQuestion(undefined);
-  }, [nextQuestion, onPhaseChange, startClock]);
+  }, [nextQuestion, startClock]);
+
+  useStartOnMount(startSession);
 
   const handleAnswer = useCallback((answerId: string) => {
     if (!question || phase !== 'playing') return;
@@ -78,36 +73,13 @@ export default function FifthsTrainer({ config, phase, onPhaseChange }: FifthsTr
     }
   }, [question, phase, nextQuestion]);
 
-  if (phase === 'idle') {
-    const kindSummary = config.fifths.questionKinds.map((kind) => QUESTION_KIND_LABEL[kind]).join(' · ');
-    return (
-      <div className="flex flex-col items-center gap-6 w-full">
-        <div className="text-center space-y-1">
-          <p className="text-zinc-500 text-sm">{kindSummary || 'Nessuna domanda selezionata'}</p>
-          <p className="text-zinc-400 text-sm">
-            {config.durationSeconds === 0 ? 'Tempo illimitato' : formatTime(config.durationSeconds)}
-            {' · '}{keys.length} tonalità
-            {' · '}{config.nameSystem === 'italian' ? 'Do Re Mi' : 'C D E'}
-          </p>
-        </div>
-        <button
-          onClick={startSession}
-          disabled={keys.length === 0 || config.fifths.questionKinds.length === 0}
-          className="w-full max-w-xs py-4 bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:opacity-50 disabled:active:scale-100 text-white text-xl font-black rounded-2xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
-        >
-          Inizia
-        </button>
-      </div>
-    );
-  }
-
   if (phase === 'finished') {
     return (
       <SessionSummary
         correct={sessionCorrect}
         total={sessionTotal}
         onRestart={startSession}
-        onHome={() => onPhaseChange('idle')}
+        onSettings={onExit}
       />
     );
   }
@@ -122,7 +94,7 @@ export default function FifthsTrainer({ config, phase, onPhaseChange }: FifthsTr
         correct={sessionCorrect}
         total={sessionTotal}
         timeLeft={timeLeft}
-        showTimer={config.durationSeconds > 0}
+        showTimer={config.fifths.durationSeconds > 0}
         onStop={finish}
       />
 

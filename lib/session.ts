@@ -1,8 +1,23 @@
 'use client';
 
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { NoteDrill } from './exercises.ts';
+import type { ExerciseConfig } from './types.ts';
 
-export type SessionPhase = 'idle' | 'playing' | 'finished';
+/** A session starts the moment its trainer mounts; the setup screen comes before it. */
+export type SessionPhase = 'playing' | 'finished';
+
+/** What the exercise page hands every trainer */
+export interface TrainerProps {
+  config: ExerciseConfig;
+  /** Back to the exercise's setup screen */
+  onExit: () => void;
+}
+
+/** The note-reading trainers are handed their exercise's settings already worked out */
+export interface NoteTrainerProps extends TrainerProps {
+  drill: NoteDrill;
+}
 
 export type FlashType = 'correct' | 'wrong' | null;
 
@@ -19,8 +34,12 @@ export function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-function remainingSeconds(deadline: number | null): number {
-  return deadline === null ? 0 : Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+/** Runs `start` once, when the trainer first mounts: mounting it is what starts the session. */
+export function useStartOnMount(start: () => void): void {
+  const startRef = useRef(start);
+  useEffect(() => {
+    startRef.current();
+  }, []);
 }
 
 export interface SessionClock {
@@ -32,12 +51,13 @@ export interface SessionClock {
 
 /**
  * Wall-clock session timer. `durationSeconds === 0` means unlimited: nothing ticks and
- * `onExpire` never fires. Deriving the remaining time from a deadline instead of
- * decrementing a counter keeps the countdown honest when a phone suspends the tab.
+ * `onExpire` never fires. Counting down to a deadline instead of decrementing a counter
+ * keeps it honest when a phone suspends the tab.
  */
 export function useSessionClock(durationSeconds: number, onExpire: () => void): SessionClock {
-  const [deadline, setDeadline] = useState<number | null>(null);
-  const [, tick] = useReducer((count: number) => count + 1, 0);
+  const [running, setRunning] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const deadlineRef = useRef<number | null>(null);
   const onExpireRef = useRef(onExpire);
 
   useEffect(() => {
@@ -45,26 +65,38 @@ export function useSessionClock(durationSeconds: number, onExpire: () => void): 
   }, [onExpire]);
 
   useEffect(() => {
-    if (deadline === null) return;
+    if (!running) return;
 
     const interval = setInterval(() => {
-      if (Date.now() < deadline) {
-        tick();
+      const now = Date.now();
+      if (deadlineRef.current === null) return;
+
+      if (now < deadlineRef.current) {
+        setTimeLeft(Math.ceil((deadlineRef.current - now) / 1000));
         return;
       }
       clearInterval(interval);
-      setDeadline(null);
+      deadlineRef.current = null;
+      setRunning(false);
+      setTimeLeft(0);
       onExpireRef.current();
     }, TICK_MS);
 
     return () => clearInterval(interval);
-  }, [deadline]);
+  }, [running]);
 
   const start = useCallback(() => {
-    setDeadline(durationSeconds > 0 ? Date.now() + durationSeconds * 1000 : null);
+    const timed = durationSeconds > 0;
+    deadlineRef.current = timed ? Date.now() + durationSeconds * 1000 : null;
+    setTimeLeft(timed ? durationSeconds : 0);
+    setRunning(timed);
   }, [durationSeconds]);
 
-  const stop = useCallback(() => setDeadline(null), []);
+  const stop = useCallback(() => {
+    deadlineRef.current = null;
+    setRunning(false);
+    setTimeLeft(0);
+  }, []);
 
-  return { timeLeft: remainingSeconds(deadline), start, stop };
+  return { timeLeft, start, stop };
 }

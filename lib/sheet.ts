@@ -5,10 +5,15 @@ import type { AllNoteStats, Clef, Note } from './types.ts';
 /** The piece is written in 4/4 and spelled entirely in quarter notes. */
 export const BEATS_PER_MEASURE = 4;
 
-/** Bar counts the settings offer */
-export const MEASURE_OPTIONS = [2, 4, 8, 16] as const;
+/** Bar counts the settings offer: how much of the piece is on screen at once */
+export const MEASURE_OPTIONS = [1, 2, 4, 8] as const;
 
 export const DEFAULT_MEASURES = 4;
+
+/** How many notes at once the timed challenge offers: one alone, or one or two bars of a piece */
+export const CHALLENGE_NOTE_OPTIONS = [1, BEATS_PER_MEASURE, 2 * BEATS_PER_MEASURE] as const;
+
+export const DEFAULT_CHALLENGE_NOTES = 1;
 
 export interface Sheet {
   /** The clef the whole piece is written in — a piece does not change clef mid-way */
@@ -31,6 +36,12 @@ export function normalizeMeasures(measures: number): number {
   const first = MEASURE_OPTIONS[0];
   const last = MEASURE_OPTIONS[MEASURE_OPTIONS.length - 1];
   return Math.min(last, Math.max(first, rounded));
+}
+
+/** Keeps a stored notes-at-once count to one the settings offer, the nearest below it if it is not one. */
+export function normalizeNotesAtOnce(notes: number): number {
+  if (!Number.isFinite(notes)) return DEFAULT_CHALLENGE_NOTES;
+  return [...CHALLENGE_NOTE_OPTIONS].reverse().find((option) => option <= notes) ?? CHALLENGE_NOTE_OPTIONS[0];
 }
 
 /**

@@ -93,10 +93,6 @@ export const RELATIVE_QUESTION_KIND_LABEL: Record<RelativeQuestionKind, string> 
   'minor-to-major': 'Minore → maggiore',
 };
 
-export const RELATIVE_QUESTION_KIND_HINT: Record<RelativeQuestionKind, string> = {
-  'major-to-minor': 'Parti dalla maggiore e trova la relativa minore',
-  'minor-to-major': 'Parti dalla minore e trova la relativa maggiore',
-};
 
 /** Pair label for the settings grid, e.g. "Do / La". */
 export function displayRelativePair(pair: RelativePair, system: NoteNameSystem): string {

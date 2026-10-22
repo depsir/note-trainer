@@ -2,14 +2,21 @@
 
 import { useCallback, useSyncExternalStore } from 'react';
 import { useHydrated } from './client.ts';
-import type { AllNoteStats, ExerciseConfig, TrainingMode } from './types.ts';
+import type {
+  AllNoteStats,
+  Clef,
+  ExerciseConfig,
+  NoteChallengeConfig,
+  NotePoolConfig,
+  SheetReadingConfig,
+} from './types.ts';
 import { ALL_NOTES, DEFAULT_LEDGER_LINES, getDefaultEnabledNotes, noteId } from './notes.ts';
 import { ALL_QUESTION_KINDS, getDefaultEnabledKeys } from './fifths.ts';
 import { ALL_RELATIVE_QUESTION_KINDS } from './relatives.ts';
 import { getDefaultEnabledDegrees } from './intervals.ts';
 import { getDefaultBuildDegrees, getDefaultEnabledRoots } from './intervalBuild.ts';
 import { ALL_SCALE_TYPES, getDefaultEnabledTonics } from './scales.ts';
-import { DEFAULT_MEASURES } from './sheet.ts';
+import { DEFAULT_CHALLENGE_NOTES, DEFAULT_MEASURES, normalizeMeasures, normalizeNotesAtOnce, sheetNoteCount } from './sheet.ts';
 import { DEFAULT_A4 } from './pitch.ts';
 
 const STATS_KEY = 'note-coach-stats';
@@ -17,42 +24,57 @@ const CONFIG_KEY = 'note-coach-config';
 const STORAGE_EVENT = 'note-coach-storage';
 const EMPTY_STATS: AllNoteStats = {};
 
+const DEFAULT_DURATION = 3 * 60;
+
+function defaultPool(clefs: Clef[]): NotePoolConfig {
+  return { clefs, enabledNotes: getDefaultEnabledNotes(clefs), ledgerLines: DEFAULT_LEDGER_LINES };
+}
+
+function defaultReading(clefs: Clef[]): SheetReadingConfig {
+  return { ...defaultPool(clefs), measures: DEFAULT_MEASURES };
+}
+
+function defaultChallenge(clefs: Clef[]): NoteChallengeConfig {
+  return { ...defaultPool(clefs), durationSeconds: DEFAULT_DURATION, notesAtOnce: DEFAULT_CHALLENGE_NOTES };
+}
+
 const DEFAULT_CONFIG: ExerciseConfig = {
-  mode: 'notes',
-  durationSeconds: 3 * 60,
-  clefs: ['treble', 'bass'],
-  enabledNotes: getDefaultEnabledNotes(['treble', 'bass']),
-  ledgerLines: DEFAULT_LEDGER_LINES,
-  useAdaptive: true,
   nameSystem: 'italian',
+  notes: defaultReading(['treble', 'bass']),
+  // An instrument reads one clef far more often than both
+  play: defaultReading(['treble']),
+  notesChallenge: defaultChallenge(['treble', 'bass']),
+  playChallenge: defaultChallenge(['treble']),
   fifths: {
+    durationSeconds: DEFAULT_DURATION,
     questionKinds: [...ALL_QUESTION_KINDS],
     enabledKeys: getDefaultEnabledKeys(),
+    clefs: ['treble', 'bass'],
   },
   relatives: {
+    durationSeconds: DEFAULT_DURATION,
     questionKinds: [...ALL_RELATIVE_QUESTION_KINDS],
     enabledKeys: getDefaultEnabledKeys(),
   },
   intervals: {
+    durationSeconds: DEFAULT_DURATION,
     enabledDegrees: getDefaultEnabledDegrees(),
     presentation: 'staff',
     qualityScope: 'all',
+    clefs: ['treble', 'bass'],
   },
   intervalBuild: {
+    durationSeconds: DEFAULT_DURATION,
     enabledDegrees: getDefaultBuildDegrees(),
     qualityScope: 'default',
     enabledRoots: getDefaultEnabledRoots(),
   },
   scales: {
+    durationSeconds: DEFAULT_DURATION,
     enabledTypes: [...ALL_SCALE_TYPES],
     enabledTonics: getDefaultEnabledTonics(),
   },
-  sheet: {
-    enabled: false,
-    measures: DEFAULT_MEASURES,
-  },
   audio: {
-    enabled: false,
     // The guitar is what the input was built for; a config saved before this
     // setting existed came from one, so it is also the right fallback.
     instrument: 'guitar',
@@ -62,21 +84,117 @@ const DEFAULT_CONFIG: ExerciseConfig = {
   },
 };
 
-/** The two interval modes were merged into one whose quality range now lives in the config. */
-type LegacyMode = TrainingMode | 'intervals-major' | 'intervals-any';
-type LegacyConfig = Omit<Partial<ExerciseConfig>, 'mode'> & { mode?: LegacyMode };
-type MergedConfig = Omit<ExerciseConfig, 'mode'> & { mode: LegacyMode };
+/**
+ * The shape saved before each exercise had its own settings: one duration, one set of
+ * clefs and one note pool for everything, with sheet reading and the microphone as
+ * switches on note reading. Two interval modes, merged since, may also still be there.
+ */
+interface LegacyConfig {
+  mode?: string;
+  durationSeconds?: number;
+  clefs?: Clef[];
+  enabledNotes?: string[];
+  ledgerLines?: number;
+  sheet?: { enabled?: boolean; measures?: number };
+  intervals?: Partial<ExerciseConfig['intervals']>;
+}
 
-function migrateConfig(config: MergedConfig): ExerciseConfig {
-  const { mode } = config;
-  if (mode !== 'intervals-major' && mode !== 'intervals-any') return { ...config, mode };
+/**
+ * Note reading before the timed challenge was an exercise of its own: one note at a time
+ * or a piece, with or without a clock.
+ */
+interface LegacyNoteDrill {
+  view?: 'single' | 'sheet';
+  durationSeconds?: number;
+}
+
+type SavedConfig = { [K in keyof ExerciseConfig]?: Partial<ExerciseConfig[K]> } & LegacyConfig & {
+  notes?: LegacyNoteDrill;
+  play?: LegacyNoteDrill;
+};
+
+type SavedNoteDrill = Partial<SheetReadingConfig> & LegacyNoteDrill;
+
+/** Spreads what was saved under the old flat shape into the sections that now hold it. */
+function migrateLegacy(saved: SavedConfig): SavedConfig {
+  if (saved.notes) return saved;
+
+  const shared = {
+    ...(saved.durationSeconds !== undefined && { durationSeconds: saved.durationSeconds }),
+  };
+  const clefs = saved.clefs && { clefs: saved.clefs };
+  const drill: SavedNoteDrill = {
+    ...shared,
+    ...clefs,
+    ...(saved.enabledNotes && { enabledNotes: saved.enabledNotes }),
+    ...(saved.ledgerLines !== undefined && { ledgerLines: saved.ledgerLines }),
+    ...(saved.sheet?.measures !== undefined && { measures: saved.sheet.measures }),
+    view: saved.sheet?.enabled ? 'sheet' : 'single',
+  };
+  const legacyScope =
+    saved.mode === 'intervals-major' ? 'default' : saved.mode === 'intervals-any' ? 'all' : undefined;
+
   return {
-    ...config,
-    mode: 'intervals',
-    intervals: {
-      ...config.intervals,
-      qualityScope: mode === 'intervals-major' ? 'default' : 'all',
-    },
+    ...saved,
+    notes: drill,
+    play: drill,
+    fifths: { ...saved.fifths, ...shared, ...clefs },
+    relatives: { ...saved.relatives, ...shared },
+    intervals: { ...saved.intervals, ...shared, ...clefs, ...(legacyScope && { qualityScope: legacyScope }) },
+    intervalBuild: { ...saved.intervalBuild, ...shared },
+    scales: { ...saved.scales, ...shared },
+  };
+}
+
+/** The challenge a reader of the old note reading gets: the same notes, as many at once, the same clock. */
+function challengeFromDrill(drill: SavedNoteDrill | undefined): Partial<NoteChallengeConfig> | undefined {
+  if (!drill) return undefined;
+  const { view, measures, durationSeconds, ...pool } = drill;
+  return {
+    ...pool,
+    ...(durationSeconds && { durationSeconds }),
+    ...(view && { notesAtOnce: view === 'sheet' ? sheetNoteCount(measures ?? DEFAULT_MEASURES) : 1 }),
+  };
+}
+
+function resolvePool(merged: NotePoolConfig): NotePoolConfig {
+  return { clefs: merged.clefs, enabledNotes: merged.enabledNotes, ledgerLines: merged.ledgerLines };
+}
+
+// Built field by field, so what the old note reading kept (its view, its clock) is left behind.
+function resolveReading(saved: SavedNoteDrill | undefined, fallback: SheetReadingConfig): SheetReadingConfig {
+  const merged = { ...fallback, ...saved };
+  return { ...resolvePool(merged), measures: normalizeMeasures(merged.measures) };
+}
+
+function resolveChallenge(
+  saved: Partial<NoteChallengeConfig> | undefined,
+  fallback: NoteChallengeConfig
+): NoteChallengeConfig {
+  const merged = { ...fallback, ...saved };
+  return {
+    ...resolvePool(merged),
+    // A challenge is always against the clock
+    durationSeconds: merged.durationSeconds > 0 ? merged.durationSeconds : fallback.durationSeconds,
+    notesAtOnce: normalizeNotesAtOnce(merged.notesAtOnce),
+  };
+}
+
+function resolveConfig(raw: SavedConfig): ExerciseConfig {
+  const saved = migrateLegacy(raw);
+  return {
+    nameSystem: saved.nameSystem ?? DEFAULT_CONFIG.nameSystem,
+    // Each section merges on its own, so configs saved before a field existed still get its default.
+    notes: resolveReading(saved.notes, DEFAULT_CONFIG.notes),
+    play: resolveReading(saved.play, DEFAULT_CONFIG.play),
+    notesChallenge: resolveChallenge(saved.notesChallenge ?? challengeFromDrill(saved.notes), DEFAULT_CONFIG.notesChallenge),
+    playChallenge: resolveChallenge(saved.playChallenge ?? challengeFromDrill(saved.play), DEFAULT_CONFIG.playChallenge),
+    fifths: { ...DEFAULT_CONFIG.fifths, ...saved.fifths },
+    relatives: { ...DEFAULT_CONFIG.relatives, ...saved.relatives },
+    intervals: { ...DEFAULT_CONFIG.intervals, ...saved.intervals },
+    intervalBuild: { ...DEFAULT_CONFIG.intervalBuild, ...saved.intervalBuild },
+    scales: { ...DEFAULT_CONFIG.scales, ...saved.scales },
+    audio: { ...DEFAULT_CONFIG.audio, ...saved.audio },
   };
 }
 
@@ -144,19 +262,7 @@ function getConfigSnapshot() {
   if (raw === cachedConfigRaw) return cachedConfigValue;
 
   cachedConfigRaw = raw;
-  const savedConfig = raw ? loadJSON<LegacyConfig>(CONFIG_KEY, DEFAULT_CONFIG) : DEFAULT_CONFIG;
-  cachedConfigValue = migrateConfig({
-    ...DEFAULT_CONFIG,
-    ...savedConfig,
-    // Nested sections need their own merge so configs saved before they existed still get defaults.
-    fifths: { ...DEFAULT_CONFIG.fifths, ...savedConfig.fifths },
-    relatives: { ...DEFAULT_CONFIG.relatives, ...savedConfig.relatives },
-    intervals: { ...DEFAULT_CONFIG.intervals, ...savedConfig.intervals },
-    intervalBuild: { ...DEFAULT_CONFIG.intervalBuild, ...savedConfig.intervalBuild },
-    scales: { ...DEFAULT_CONFIG.scales, ...savedConfig.scales },
-    sheet: { ...DEFAULT_CONFIG.sheet, ...savedConfig.sheet },
-    audio: { ...DEFAULT_CONFIG.audio, ...savedConfig.audio },
-  });
+  cachedConfigValue = raw ? resolveConfig(loadJSON<SavedConfig>(CONFIG_KEY, {})) : DEFAULT_CONFIG;
   return cachedConfigValue;
 }
 

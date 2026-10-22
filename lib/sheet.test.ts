@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { ALL_NOTES, noteId } from './notes.ts';
-import { BEATS_PER_MEASURE, buildSheet, measureOf, normalizeMeasures, sheetNoteCount } from './sheet.ts';
+import { BEATS_PER_MEASURE, buildSheet, measureOf, normalizeMeasures, normalizeNotesAtOnce, sheetNoteCount } from './sheet.ts';
 import type { AllNoteStats, Note } from './types.ts';
 
 const NO_STATS: AllNoteStats = {};
@@ -12,18 +12,36 @@ function trebleNotes(): Note[] {
 
 describe('normalizeMeasures', () => {
   it('keeps the offered bar counts', () => {
-    assert.equal(normalizeMeasures(2), 2);
-    assert.equal(normalizeMeasures(16), 16);
+    assert.equal(normalizeMeasures(1), 1);
+    assert.equal(normalizeMeasures(8), 8);
   });
 
   it('clamps anything outside them', () => {
-    assert.equal(normalizeMeasures(0), 2);
-    assert.equal(normalizeMeasures(-5), 2);
-    assert.equal(normalizeMeasures(100), 16);
+    assert.equal(normalizeMeasures(0), 1);
+    assert.equal(normalizeMeasures(-5), 1);
+    assert.equal(normalizeMeasures(100), 8);
   });
 
   it('falls back to the default for a value that is not a number', () => {
     assert.equal(normalizeMeasures(Number.NaN), 4);
+  });
+});
+
+describe('normalizeNotesAtOnce', () => {
+  it('keeps the offered counts', () => {
+    assert.equal(normalizeNotesAtOnce(1), 1);
+    assert.equal(normalizeNotesAtOnce(4), 4);
+    assert.equal(normalizeNotesAtOnce(8), 8);
+  });
+
+  it('takes the nearest offered count below anything else', () => {
+    assert.equal(normalizeNotesAtOnce(16), 8);
+    assert.equal(normalizeNotesAtOnce(6), 4);
+    assert.equal(normalizeNotesAtOnce(0), 1);
+  });
+
+  it('falls back to a single note for a value that is not a number', () => {
+    assert.equal(normalizeNotesAtOnce(Number.NaN), 1);
   });
 });
 
@@ -77,7 +95,7 @@ describe('buildSheet', () => {
   });
 
   it('clamps a bar count it was handed out of range', () => {
-    assert.equal(buildSheet(trebleNotes(), NO_STATS, false, 999).measures, 16);
+    assert.equal(buildSheet(trebleNotes(), NO_STATS, false, 999).measures, 8);
   });
 
   it('refuses to write a piece with nothing to write it from', () => {
